@@ -160,3 +160,4 @@ cython_debug/
 #.idea/
 
 bot.py
+commands.txt
