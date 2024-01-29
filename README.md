@@ -1,4 +1,5 @@
 # DiscordDrive
+
 ## Description:
 We aim to create a Python library that can manage a Google Drive file system through a set of Discord bot commands. These commands will be loaded as a “Cog”, which is a collection of commands that can be added to an existing Discord bot. The bot will be able to manage a file system, including creating new directories and adding and retrieving files. This adds a level of privacy to a Google Drive folder, eliminating security risks of users with access deleting files. Admins will import our library, add the Cog to their personal Discord bot, and use their personal Google account and OAuth token to interface with the Google Drive API.
 
