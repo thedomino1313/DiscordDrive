@@ -5,7 +5,7 @@ from discord.ext import commands
 
 load_dotenv()
 
-class DiscordDrive(commands.Cog):
+class DriveAPICommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         
