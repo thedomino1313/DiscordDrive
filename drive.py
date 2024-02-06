@@ -15,6 +15,7 @@ class DriveAPI:
 
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
+    
     def __init__(self, root:str):
         print(getcwd())
         if not root:
