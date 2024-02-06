@@ -19,21 +19,24 @@ class Command:
 
 class DriveAPICommands(commands.Cog):
     
-    def __init__(self, bot: commands.Bot):
+    def __init__(self, bot: commands.Bot, root: str):
         self.bot = bot
+        self.root = root
+        # self.root_alias = '~'
         self.capacity = 15
-        self._history = defaultdict(lambda: deque())
+        self._command_history = defaultdict(lambda: deque())
+        self._wd_cache = defaultdict(lambda: f"/{self.root}/")
         
     def _save_to_history(self, id_, command: Command):
-        if len(self._history[id_]) == self.capacity:
-            self._history[id_].popleft()
+        if len(self._command_history[id_]) == self.capacity:
+            self._command_history[id_].popleft()
             
-        self._history[id_].append(command)
+        self._command_history[id_].append(command)
         # print(self._history[id_].pop()._str)
         # print(command._str, command._params)
     
     def _get_last_command(self, id_) -> Command:
-        return self._history[id_].pop()
+        return self._command_history[id_].pop()
     
     def _get_last_commands(self, id_, n: int) -> List[Command]:
         
@@ -48,7 +51,7 @@ class DriveAPICommands(commands.Cog):
 
     # @with_call_order
     @commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
-    async def upload(self, ctx, share_link: str):
+    async def upload(self, ctx, file: discord.Attachment):
         
         locals_ = locals()
 
@@ -62,8 +65,92 @@ class DriveAPICommands(commands.Cog):
         
         # print(locals_)
         await ctx.respond("File uploaded!")
+    
+    @commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
+    async def pwd(self, ctx):
+        locals_ = locals()
+
+        self._save_to_history(
+            id_=ctx.author.id,
+            command=Command(
+                str_=sys._getframe(0).f_code.co_name,
+                params=locals_
+            )
+        )
         
-    @commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="Get last n commands")
+        await ctx.respond(f"{self._wd_cache[ctx.author.id]}")
+    
+    @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
+    async def cd(self, ctx, folder_path):
+        """
+        
+        cases:
+
+            In directory D... can always CD when given path starting with root
+            
+            SAME DIRECTORY
+            In directory D, user supplies absolute path to D
+                            user supplies alternate relative path to D
+                            
+            DIFFERENT DIRECTORY
+            In directory X, user supplies valid RELATIVE path to D
+                            user supplies valid ABSOLUTE path that starts at root
+                            
+            ..
+            Go up one level
+            
+            .
+            Refers to current directory
+            
+            ~
+            Root alias
+            
+            Unix, Unix-like
+            cd by itself or cd ~ will always put the user in their home directory.
+            cd . will leave the user in the same directory they are currently in (i.e. the current directory won't change). This can be useful if the user's shell's internal code can't deal with the directory they are in being recreated; running cd . will place their shell in the recreated directory.
+            cd ~username will put the user in the username's home directory.
+            cd dir (without a /) will put the user in a subdirectory; for example, if they are in /usr, typing cd bin will put them in /usr/bin, while cd /bin puts them in /bin.
+            cd .. will move the user up one directory. So, if they are /usr/bin/tmp, cd .. moves them to /usr/bin, while cd ../.. moves them to /usr (i.e. up two levels). The user can use this indirection to access subdirectories too. So, from /usr/bin/tmp, they can use cd ../../local to go to /usr/local
+            cd - will switch the user to the previous directory. For example, if they are in /usr/bin/tmp, and go to /etc, they can type cd - to go back to /usr/bin/tmp. The user can use this to toggle back and forth between two directories without pushd and popd.
+
+            
+        
+        
+        
+        
+        
+        
+        
+        """
+        locals_ = locals()
+
+        # if folder_path does contain contents of WD
+        # example: WD: /root/ CD: /root/branch -> WD: /root/branch
+        # if folder_path in user_wd:
+        #     end_folder_path = user_wd.find(folder_path) + len(folder_path)
+        # do some verification that the folder path is accessible from the current working directory
+        # do some regex to match first part of folder path -- and only append last part to pwd
+        # self.wd_cache[ctx.author.id] = f"{user_wd}{}"
+        
+        self._save_to_history(
+            id_=ctx.author.id,
+            command=Command(
+                str_=sys._getframe(0).f_code.co_name,
+                params=locals_
+            )
+        )
+        
+        await ctx.respond(f"Path changed")
+        
+    @commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
+    async def ls(self, ctx):
+        pass
+    
+    @commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
+    async def mkdir(self, ctx, folder_name):
+        pass
+        
+    @commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     async def getn(self, ctx, n: int):
         locals_ = locals()
         
