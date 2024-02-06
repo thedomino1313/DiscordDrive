@@ -140,8 +140,8 @@ class DriveAPICommands(commands.Cog):
             await ctx.respond(f"Folder {folder_path} does not exist in your current directory.")
             return
 
-        folder_path = folder["name"]
-        
+        folder_path = folder[0]["name"]
+
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(

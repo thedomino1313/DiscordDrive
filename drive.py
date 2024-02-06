@@ -1,4 +1,5 @@
 import os.path
+from os import getcwd
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -15,6 +16,7 @@ class DriveAPI:
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     def __init__(self, root:str):
+        print(getcwd())
         if not root:
             raise Exception("A root directory must be provided.")
         self.root["name"] = root
@@ -48,7 +50,7 @@ class DriveAPI:
             folder = folder[0]
             self.root = folder
             self.folders[self.root['name']] = self.root['id']
-            print(f"Found folder '{self.root['name']}' with id '{self.root['id']}' and {self.root}")
+            print(f"Found folder '{self.root['name']}' with id '{self.root['id']}'")
         except HttpError as error:
             # TODO(developer) - Handle errors from drive API.
             print(f"An error occurred: {error}")
