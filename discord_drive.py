@@ -9,6 +9,8 @@ from discord.ext import commands
 from pprint import pprint
 from typing import List
 
+from drive import DriveAPI
+
 load_dotenv()
 
 class Command:
@@ -22,6 +24,7 @@ class DriveAPICommands(commands.Cog):
     def __init__(self, bot: commands.Bot, root: str):
         self.bot = bot
         self.root = root
+        self.API = DriveAPI(root)
         # self.root_alias = '~'
         self.capacity = 15
         self._command_history = defaultdict(lambda: deque())
@@ -131,6 +134,13 @@ class DriveAPICommands(commands.Cog):
         # do some verification that the folder path is accessible from the current working directory
         # do some regex to match first part of folder path -- and only append last part to pwd
         # self.wd_cache[ctx.author.id] = f"{user_wd}{}"
+        
+        folder = self.API.search(name=folder_path, parent=self._wd_cache[ctx.author.id].split("/")[-1][:-1], files=False)
+        if not folder:
+            await ctx.respond(f"Folder {folder_path} does not exist in your current directory.")
+            return
+
+        folder_path = folder["name"]
         
         self._save_to_history(
             id_=ctx.author.id,
