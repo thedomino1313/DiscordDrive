@@ -1,6 +1,8 @@
 import os.path
 from os import getcwd
 
+from inspect import getfullargspec
+
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
@@ -56,6 +58,21 @@ class DriveAPI:
             # TODO(developer) - Handle errors from drive API.
             print(f"An error occurred: {error}")
 
+    def __input_validator__(func):
+        def validate(self, *args, **kwargs):
+            argspecs = getfullargspec(func)
+            annotations = argspecs.annotations
+            
+        
+        return validate
+            
+
+
+    def validate_inputs(self, *args):
+        for value, type_ in args:
+            assert value != None, "Arguments cannot be None"
+            assert type(value) == type_, "Arguments must match the expected type"
+
     def folder_id_lookup(self, folder):
         try:
             return self.folders[folder]
@@ -70,15 +87,34 @@ class DriveAPI:
         for file in flist:
             if file["mimeType"] == self.FOLDER_TYPE:
                 self.folders[file["name"]] = file["id"]
+    
+    @__input_validator__
+    def search(self, name:str='', parent:str='', pageSize:int=1, files:bool=True, folders:bool=True, pageToken:str='', recursive:bool=False):
+        """Modular search function that can find files and folders, with the option of a specified parent directory.
 
-    def search(self, name:str='', pageSize:int=1, parent:str='', files=True, folders=True, pageToken:str='', recursive=False):
-        l = locals()
-        if any(l[var] == None for var in l):
-            raise Exception("Please do not input parameters as None")
+        Args:
+            name (str, optional): Name of a specific file/folder to find. Defaults to ''.
+            parent (str, optional): Name of a parent folder to search inside of. Defaults to ''.
+            pageSize (int, optional): Number of results to return. Defaults to 1.
+            files (bool, optional): Enable searching for files. Defaults to True.
+            folders (bool, optional): Enable searching for folders. Defaults to True.
+            pageToken (str, optional): Token for the next page of results. Defaults to ''.
+            recursive (bool, optional): Search all pages for all results. Defaults to False.
 
+        Raises:
+            Exception: Any input parameters are None
+            Exception: Both the name and parent fields are left blank
+
+        Returns:
+            list(dict): A list of the files found. Format: [{'mimeType': 'application/vnd.google-apps.folder', 'id': '1FkOWqVDhbj8y5N7gq7-XQqQjCceMVLN9', 'name': 'Example'},...]
+        """
+        
+        # Generate the search parameter for a file name
         nameScript = f" and name contains '{name}'" if name != "" and name else ""
 
+        # Generate the search parameter for a parent folder
         try:
+            # Lookup the parent folder's ID
             parentScript = f" and '{self.folder_id_lookup(parent)}' in parents" if parent != "" and parent else ""
         except HttpError as error:
             print(f"The parent folder does not exist: {error}")
@@ -98,10 +134,10 @@ class DriveAPI:
             results = (
                 self.service.files()
                 .list(pageSize=pageSize, 
-                      pageToken=pageToken, 
-                      q=f"trashed = false{mimeScript}{nameScript}{parentScript}", 
-                      orderBy="folder, name", 
-                      fields="nextPageToken, files(id, name, mimeType)")
+                    pageToken=pageToken, 
+                    q=f"trashed = false{mimeScript}{nameScript}{parentScript}", 
+                    orderBy="folder, name", 
+                    fields="nextPageToken, files(id, name, mimeType)")
                 .execute()
             )
             files = results.get("files", [])
@@ -115,4 +151,4 @@ class DriveAPI:
 
 if __name__ == "__main__":
     API = DriveAPI("RPI")
-    print(API.search(pageSize=100, parent="RPI"))
+    print(API.search(pageSize=100, parent="RPI", files="Daddy"))
