@@ -1,5 +1,4 @@
 import os.path
-from os import getcwd
 
 from inspect import getfullargspec
 
@@ -18,8 +17,22 @@ class DriveAPI:
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     
+    def __input_validator__(func):
+        def validate(self, *args, **kwargs):
+            argspecs = getfullargspec(func)
+            annotations = argspecs.annotations
+            argnames = argspecs.args
+            for val, arg in zip(args, argnames[1:len(args) + 1]):
+                assert val is not None, f"Argument '{arg}' is None, please do not use None as an argument"
+                assert type(val) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+            for arg in kwargs:
+                assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
+                assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+            return func(self, *args, **kwargs)    
+        return validate
+    
+    @__input_validator__
     def __init__(self, root:str):
-        print(getcwd())
         if not root:
             raise Exception("A root directory must be provided.")
         self.root["name"] = root
@@ -58,23 +71,9 @@ class DriveAPI:
             # TODO(developer) - Handle errors from drive API.
             print(f"An error occurred: {error}")
 
-    def __input_validator__(func):
-        def validate(self, *args, **kwargs):
-            argspecs = getfullargspec(func)
-            annotations = argspecs.annotations
-            argnames = argspecs.args
-            for val, arg in zip(args, argnames[1:len(args) + 1]):
-                assert val is not None, f"Argument '{arg}' is None, please do not use None as an argument"
-                assert type(val) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
-            for arg in kwargs:
-                assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
-                assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
-            return func(self, *args, **kwargs)    
-        return validate
-    
     @__input_validator__
-    def folder_id_lookup(self, folder:str="") -> str:
-        if folder == "":
+    def folder_id_lookup(self, folder:str) -> str:
+        if not folder:
             raise Exception("Folder name cannot be an empty string.")
         try:
             return self.folders[folder]
@@ -113,12 +112,12 @@ class DriveAPI:
         """
         
         # Generate the search parameter for a file name
-        nameScript = f" and name contains '{name}'" if name != "" and name else ""
+        nameScript = f" and name contains '{name}'" if name else ""
 
         # Generate the search parameter for a parent folder
         try:
             # Lookup the parent folder's ID
-            parentScript = f" and '{self.folder_id_lookup(parent)}' in parents" if parent != "" and parent else ""
+            parentScript = f" and '{self.folder_id_lookup(parent)}' in parents" if parent else ""
         except HttpError as error:
             print(f"The parent folder does not exist: {error}")
             return None, None
@@ -143,15 +142,15 @@ class DriveAPI:
                     fields="nextPageToken, files(id, name, mimeType)")
                 .execute()
             )
-            files = results.get("files", [])
-            self.update_folders(files)
-            if (pageToken := results.get("nextPageToken", "")) != "" and recursive:
-                return results.get("files", []) + self.search(name=name, pageSize=pageSize, parent=parent, files=files, folders=folders, pageToken=pageToken, recursive=recursive)
-            return files
+            foundfiles = results.get("files", [])
+            self.update_folders(foundfiles)
+            if (pageToken := results.get("nextPageToken", "")) and recursive:
+                return foundfiles + self.search(name=name, pageSize=pageSize, parent=parent, files=files, folders=folders, pageToken=pageToken, recursive=recursive)
+            return foundfiles
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
 
 if __name__ == "__main__":
     API = DriveAPI("RPI")
-    print(API.search(pageSize=100, parent="RPI"))
+    print("\n".join([f"{result['name']} is of type {result['mimeType'].rsplit('.', 1)[1]} with ID {result['id']}" for result in API.search(pageSize=1, parent="RPI", recursive=True)]))
