@@ -135,7 +135,7 @@ class DriveAPICommands(commands.Cog):
         # do some regex to match first part of folder path -- and only append last part to pwd
         # self.wd_cache[ctx.author.id] = f"{user_wd}{}"
         
-        folder = self.API.search(name=folder_path, parent=self._wd_cache[ctx.author.id].split("/")[-1][:-1], files=False)
+        folder = self.API.search(name=folder_path, parent=self._wd_cache[ctx.author.id].split("/")[-2], files=False)
         if not folder:
             await ctx.respond(f"Folder {folder_path} does not exist in your current directory.")
             return
