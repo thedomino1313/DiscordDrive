@@ -62,18 +62,20 @@ class DriveAPI:
         def validate(self, *args, **kwargs):
             argspecs = getfullargspec(func)
             annotations = argspecs.annotations
-            
-        
+            argnames = argspecs.args
+            for val, arg in zip(args, argnames[1:len(args) + 1]):
+                assert val is not None, f"Argument '{arg}' is None, please do not use None as an argument"
+                assert type(val) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+            for arg in kwargs:
+                assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
+                assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+            return func(self, *args, **kwargs)    
         return validate
-            
-
-
-    def validate_inputs(self, *args):
-        for value, type_ in args:
-            assert value != None, "Arguments cannot be None"
-            assert type(value) == type_, "Arguments must match the expected type"
-
-    def folder_id_lookup(self, folder):
+    
+    @__input_validator__
+    def folder_id_lookup(self, folder:str="") -> str:
+        if folder == "":
+            raise Exception("Folder name cannot be an empty string.")
         try:
             return self.folders[folder]
         except:
@@ -83,13 +85,14 @@ class DriveAPI:
             self.folders[found_folder["name"]] = found_folder["id"]
             return found_folder["id"]
 
-    def update_folders(self, flist):
+    @__input_validator__
+    def update_folders(self, flist:list) -> None:
         for file in flist:
             if file["mimeType"] == self.FOLDER_TYPE:
                 self.folders[file["name"]] = file["id"]
     
     @__input_validator__
-    def search(self, name:str='', parent:str='', pageSize:int=1, files:bool=True, folders:bool=True, pageToken:str='', recursive:bool=False):
+    def search(self, name:str='', parent:str='', pageSize:int=1, files:bool=True, folders:bool=True, pageToken:str='', recursive:bool=False) -> list:
         """Modular search function that can find files and folders, with the option of a specified parent directory.
 
         Args:
@@ -147,8 +150,8 @@ class DriveAPI:
             return files
         except HttpError as error:
             print(f"An error occurred: {error}")
-            return None, None
+            return None
 
 if __name__ == "__main__":
     API = DriveAPI("RPI")
-    print(API.search(pageSize=100, parent="RPI", files="Daddy"))
+    print(API.search(pageSize=100, parent="RPI"))
