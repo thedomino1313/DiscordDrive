@@ -43,7 +43,7 @@ class DriveAPICommands(commands.Cog):
     
     def _get_last_commands(self, id_, n: int) -> List[Command]:
         
-        if n > len(self._history[id_]):
+        if n > len(self._command_history[id_]):
             raise IndexError
         
         commands = []

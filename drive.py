@@ -17,7 +17,7 @@ class DriveAPI:
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     
-    def __input_validator__(func):
+    def _input_validator(func):
         def validate(self, *args, **kwargs):
             argspecs = getfullargspec(func)
             annotations = argspecs.annotations
@@ -31,7 +31,7 @@ class DriveAPI:
             return func(self, *args, **kwargs)    
         return validate
     
-    @__input_validator__
+    @_input_validator
     def __init__(self, root:str):
         if not root:
             raise Exception("A root directory must be provided.")
@@ -71,26 +71,26 @@ class DriveAPI:
             # TODO(developer) - Handle errors from drive API.
             print(f"An error occurred: {error}")
 
-    @__input_validator__
+    @_input_validator
     def folder_id_lookup(self, folder:str) -> str:
         if not folder:
             raise Exception("Folder name cannot be an empty string.")
         try:
             return self.folders[folder]
         except:
-            found_folder = self.search(name=folder, files=False)[0][0]
+            found_folder = self.search(name=folder, files=False)[0]
             if not found_folder:
                 raise HttpError("No folders were found")
             self.folders[found_folder["name"]] = found_folder["id"]
             return found_folder["id"]
 
-    @__input_validator__
+    @_input_validator
     def update_folders(self, flist:list) -> None:
         for file in flist:
             if file["mimeType"] == self.FOLDER_TYPE:
                 self.folders[file["name"]] = file["id"]
     
-    @__input_validator__
+    @_input_validator
     def search(self, name:str='', parent:str='', pageSize:int=1, files:bool=True, folders:bool=True, pageToken:str='', recursive:bool=False) -> list:
         """Modular search function that can find files and folders, with the option of a specified parent directory.
 
@@ -152,5 +152,5 @@ class DriveAPI:
             return None
 
 if __name__ == "__main__":
-    API = DriveAPI("RPI")
-    print("\n".join([f"{result['name']} is of type {result['mimeType'].rsplit('.', 1)[1]} with ID {result['id']}" for result in API.search(pageSize=1, parent="RPI", recursive=True)]))
+    API = DriveAPI("Textbooks")
+    print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
