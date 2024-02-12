@@ -78,7 +78,7 @@ class DriveAPI:
         try:
             return self.folders[folder]
         except:
-            found_folder = self.search(name=folder, files=False)[0][0]
+            found_folder = self.search(name=folder, files=False)[0]
             if not found_folder:
                 raise HttpError("No folders were found")
             self.folders[found_folder["name"]] = found_folder["id"]
@@ -152,5 +152,5 @@ class DriveAPI:
             return None
 
 if __name__ == "__main__":
-    API = DriveAPI("RPI")
-    print("\n".join([f"{result['name']} is of type {result['mimeType'].rsplit('.', 1)[1]} with ID {result['id']}" for result in API.search(pageSize=1, parent="RPI", recursive=True)]))
+    API = DriveAPI("Textbooks")
+    print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
