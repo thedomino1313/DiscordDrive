@@ -1,5 +1,6 @@
 import discord
 import os
+import pathlib
 import sys
 
 from collections import defaultdict, deque
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 from discord.ext import commands
 from pprint import pprint
 from typing import List
+
 
 from drive import DriveAPI
 
@@ -28,7 +30,7 @@ class DriveAPICommands(commands.Cog):
         # self.root_alias = '~'
         self.capacity = 15
         self._command_history = defaultdict(lambda: deque())
-        self._wd_cache = defaultdict(lambda: f"/{self.root}/")
+        self._wd_cache = defaultdict(lambda: pathlib.Path(self.root))
         
     def _save_to_history(self, id_, command: Command):
         if len(self._command_history[id_]) == self.capacity:
@@ -84,7 +86,9 @@ class DriveAPICommands(commands.Cog):
         await ctx.respond(f"{self._wd_cache[ctx.author.id]}")
     
     @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
-    async def cd(self, ctx, folder_path):
+    async def cd(self, ctx, path=""):
+            
+        
         """
         
         cases:
@@ -111,7 +115,7 @@ class DriveAPICommands(commands.Cog):
             Unix, Unix-like
             cd by itself or cd ~ will always put the user in their home directory.
             cd . will leave the user in the same directory they are currently in (i.e. the current directory won't change). This can be useful if the user's shell's internal code can't deal with the directory they are in being recreated; running cd . will place their shell in the recreated directory.
-            cd ~username will put the user in the username's home directory.
+            X cd ~username will put the user in the username's home directory.
             cd dir (without a /) will put the user in a subdirectory; for example, if they are in /usr, typing cd bin will put them in /usr/bin, while cd /bin puts them in /bin.
             cd .. will move the user up one directory. So, if they are /usr/bin/tmp, cd .. moves them to /usr/bin, while cd ../.. moves them to /usr (i.e. up two levels). The user can use this indirection to access subdirectories too. So, from /usr/bin/tmp, they can use cd ../../local to go to /usr/local
             cd - will switch the user to the previous directory. For example, if they are in /usr/bin/tmp, and go to /etc, they can type cd - to go back to /usr/bin/tmp. The user can use this to toggle back and forth between two directories without pushd and popd.
@@ -125,22 +129,43 @@ class DriveAPICommands(commands.Cog):
         
         
         """
-        locals_ = locals()
+        # locals_ = locals()
 
-        # if folder_path does contain contents of WD
+        
+        # if path does contain contents of WD
         # example: WD: /root/ CD: /root/branch -> WD: /root/branch
-        # if folder_path in user_wd:
-        #     end_folder_path = user_wd.find(folder_path) + len(folder_path)
+        # if path in user_wd:
+        #     end_path = user_wd.find(path) + len(path)
         # do some verification that the folder path is accessible from the current working directory
         # do some regex to match first part of folder path -- and only append last part to pwd
         # self.wd_cache[ctx.author.id] = f"{user_wd}{}"
+        locals_ = locals()
         
-        folder = self.API.search(name=folder_path, parent=self._wd_cache[ctx.author.id].split("/")[-2], files=False)
-        if not folder:
-            await ctx.respond(f"Folder {folder_path} does not exist in your current directory.")
+        if path == "" or path == '~':
+            self._wd_cache[ctx.author.id] = self.root
+        
+        elif path == '.':
+            # say something like path not changed
             return
+        
+        elif path == "..":
+            cwd = self._wd_cache[ctx.author.id]
+            if cwd != pathlib.Path("Textbooks"):
+                self._wd_cache[ctx.author.id] = cwd.parent # get first ancestor
+            else:
+                await ctx.respond(f"You are in the root directory.")
 
-        folder_path = folder[0]["name"]
+        else:
+            
+            folder = self.API.search(name=path, parent=self._wd_cache[ctx.author.id].name, files=False)
+            await ctx.respond(f"{folder}")
+            
+            if not folder:
+                await ctx.respond(f"Folder {path} is not reachable from your current directory.")
+                return
+
+            path = folder[0]["name"]
+            self._wd_cache[ctx.author.id] /= path
 
         self._save_to_history(
             id_=ctx.author.id,
