@@ -1,6 +1,7 @@
 # DiscordDrive Specifics
 credentials.json
 token.json
+temp/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
