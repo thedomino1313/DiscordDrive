@@ -150,7 +150,7 @@ class DriveAPICommands(commands.Cog):
         
         elif path == "..":
             cwd = self._wd_cache[ctx.author.id]
-            if cwd != pathlib.Path("Textbooks"):
+            if cwd != pathlib.Path(self.root):
                 self._wd_cache[ctx.author.id] = cwd.parent # get first ancestor
             else:
                 await ctx.respond(f"You are in the root directory.")
