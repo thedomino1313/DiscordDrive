@@ -168,8 +168,10 @@ class DriveAPI:
 
     @_input_validator
     @_temp_dir("temp")
-    async def upload(self, file:Attachment):
-        file_metadata = {"name": file.filename}
+    async def upload(self, file:Attachment, folder:str=""):
+        if not folder:
+            folder = self.root["name"]
+        file_metadata = {"name": file.filename, "parents": [self.folder_id_lookup(folder)]}
         filename = f"temp/{file.filename}"
         await file.save(filename)
         media = MediaFileUpload(filename, mimetype=file.content_type)
