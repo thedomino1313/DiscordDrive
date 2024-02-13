@@ -21,7 +21,7 @@ class DriveAPI:
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     
     def _input_validator(func):
-        def validate(self, *args, **kwargs):
+        def _validate(self, *args, **kwargs):
             argspecs = getfullargspec(func)
             annotations = argspecs.annotations
             argnames = argspecs.args
@@ -32,8 +32,21 @@ class DriveAPI:
                 assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
                 assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             return func(self, *args, **kwargs)    
-        return validate
+        return _validate
     
+    def _temp_dir(path):
+        def _temp_decorator(func):
+            async def _temp_manager(self, *args, **kwargs):
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                ret = await func(self, *args, **kwargs)
+                for file in os.listdir(path):
+                    os.remove(os.path.join(path, file))
+                os.rmdir(path)
+                return ret
+            return _temp_manager
+        return _temp_decorator
+
     @_input_validator
     def __init__(self, root:str):
         if not root:
@@ -154,20 +167,23 @@ class DriveAPI:
             return None
 
     @_input_validator
+    @_temp_dir("temp")
     async def upload(self, file:Attachment):
-        file_metadata = {"name": "test.jpeg"}
+        file_metadata = {"name": file.filename}
         filename = f"temp/{file.filename}"
         await file.save(filename)
         media = MediaFileUpload(filename, mimetype=file.content_type)
         
-        file = (
-            self.service.files()
-            .create(body=file_metadata, media_body=media, fields="id")
-            .execute()
-        )
-        os.remove(filename)
-        print(f'File ID: {file.get("id")}')
-
+        try:
+            file = (
+                self.service.files()
+                .create(body=file_metadata, media_body=media, fields="name")
+                .execute()
+            )
+            return file["name"]
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            return None
 
 if __name__ == "__main__":
     API = DriveAPI("Textbooks")
