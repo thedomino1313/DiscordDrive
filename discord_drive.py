@@ -60,7 +60,7 @@ class DriveAPICommands(commands.Cog):
         
         locals_ = locals()
 
-        name = await self.API.upload(file)
+        name = await self.API.upload_from_discord(file)
         if name:
             await ctx.respond(f"File {name} uploaded!")
         else:
