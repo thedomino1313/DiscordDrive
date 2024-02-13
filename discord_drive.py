@@ -57,7 +57,7 @@ class DriveAPICommands(commands.Cog):
     async def upload(self, ctx, file: discord.Attachment):
         
         locals_ = locals()
-
+        await self.API.upload(file)
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(
@@ -67,7 +67,7 @@ class DriveAPICommands(commands.Cog):
         )
         
         # print(locals_)
-        await ctx.respond("File uploaded!")
+        await ctx.respond(f"{file.content_type}")
     
     @commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
     async def pwd(self, ctx):

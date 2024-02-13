@@ -7,6 +7,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
+
+from discord import Attachment
 
 
 class DriveAPI:
@@ -61,8 +64,7 @@ class DriveAPI:
             folder = self.search(name=self.root['name'], files=False)
             
             if not folder:
-                print("No folders found, check the root name.")
-                return
+                raise Exception("No folders found, check the root name.")
             folder = folder[0]
             self.root = folder
             self.folders[self.root['name']] = self.root['id']
@@ -112,7 +114,7 @@ class DriveAPI:
         """
         
         # Generate the search parameter for a file name
-        nameScript = f" and name contains '{name}'" if name else ""
+        nameScript = f" and name = '{name}'" if name else ""
 
         # Generate the search parameter for a parent folder
         try:
@@ -150,6 +152,22 @@ class DriveAPI:
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
+
+    @_input_validator
+    async def upload(self, file:Attachment):
+        file_metadata = {"name": "test.jpeg"}
+        filename = f"temp/{file.filename}"
+        await file.save(filename)
+        media = MediaFileUpload(filename, mimetype=file.content_type)
+        
+        file = (
+            self.service.files()
+            .create(body=file_metadata, media_body=media, fields="id")
+            .execute()
+        )
+        os.remove(filename)
+        print(f'File ID: {file.get("id")}')
+
 
 if __name__ == "__main__":
     API = DriveAPI("Textbooks")
