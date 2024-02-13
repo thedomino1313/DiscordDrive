@@ -168,13 +168,20 @@ class DriveAPI:
 
     @_input_validator
     @_temp_dir("temp")
-    async def upload(self, file:Attachment, folder:str=""):
-        if not folder:
-            folder = self.root["name"]
-        file_metadata = {"name": file.filename, "parents": [self.folder_id_lookup(folder)]}
+    async def upload_from_discord(self, file:Attachment, folder:str=""):
         filename = f"temp/{file.filename}"
         await file.save(filename)
-        media = MediaFileUpload(filename, mimetype=file.content_type)
+        return self.upload(file.filename, file.content_type, path="temp", folder=folder)
+        
+
+    @_input_validator
+    def upload(self, file:str, content_type:str, path:str=".", folder:str=""):
+        if not folder:
+            folder = self.root["name"]
+        
+        file_metadata = {"name": file, "parents": [self.folder_id_lookup(folder)]}
+        
+        media = MediaFileUpload(path + "/" + file, mimetype=content_type)
         
         try:
             file = (
