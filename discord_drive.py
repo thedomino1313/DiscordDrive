@@ -144,7 +144,7 @@ class DriveAPICommands(commands.Cog):
         locals_ = locals()
         
         if path == "" or path == '~':
-            self._wd_cache[ctx.author.id] = pathlib.Path(self.root)
+            self._wd_cache[ctx.author.id] = pathlib.Path(self.root) 
         
         elif path == '.':
             # say something like path not changed
