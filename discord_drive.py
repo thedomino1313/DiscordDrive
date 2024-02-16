@@ -56,13 +56,16 @@ class DriveAPICommands(commands.Cog):
 
     # @with_call_order
     @commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
-    async def upload(self, ctx: commands.Context, file: discord.Attachment):
+    async def upload(self, ctx: discord.ApplicationContext, file: discord.Attachment):
+        await ctx.defer()
         
         locals_ = locals()
-
-        name = await self.API.upload_from_discord(file)
+        name = await self.API.upload_from_discord(file=file, folder="Dev")
         if name:
-            await ctx.respond(f"File {name} uploaded!")
+            if type(name) == list:
+                await ctx.respond(f"Files {', '.join(name)} uploaded!")
+            else:
+                await ctx.respond(f"File {name} uploaded!")
         else:
             return
         self._save_to_history(
@@ -88,7 +91,7 @@ class DriveAPICommands(commands.Cog):
         await ctx.respond(f"{self._wd_cache[ctx.author.id][0]}")
     
     @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
-    async def cd(self, ctx: commands.Context, path=""):
+    async def cd(self, ctx: discord.ApplicationContext, path=""):
             
         
         """
@@ -182,11 +185,11 @@ class DriveAPICommands(commands.Cog):
         pass
     
     @commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
-    async def mkdir(self, ctx: commands.Context, folder_name):
+    async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
         pass
         
     @commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
-    async def getn(self, ctx: commands.Context, n: int):
+    async def getn(self, ctx: discord.ApplicationContext, n: int):
         locals_ = locals()
         
         try:
