@@ -62,10 +62,7 @@ class DriveAPICommands(commands.Cog):
         locals_ = locals()
         name = await self.API.upload_from_discord(file=file, folder="Dev")
         if name:
-            if type(name) == list:
-                await ctx.respond(f"Files {', '.join(name)} uploaded!")
-            else:
-                await ctx.respond(f"File {name} uploaded!")
+            await ctx.respond(name)
         else:
             return
         self._save_to_history(
