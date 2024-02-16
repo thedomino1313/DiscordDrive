@@ -8,7 +8,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from discord.ext import commands
 from pprint import pprint
-from typing import List
+from typing import List, Iterable
 
 
 from drive import DriveAPI
@@ -30,7 +30,7 @@ class DriveAPICommands(commands.Cog):
         # self.root_alias = '~'
         self.capacity = 15
         self._command_history = defaultdict(lambda: deque())
-        self._wd_cache = defaultdict(lambda: pathlib.Path(self.root))
+        self._wd_cache = defaultdict(lambda: [pathlib.Path(self.root), pathlib.Path(self.root)])
         
     def _save_to_history(self, id_, command: Command):
         if len(self._command_history[id_]) == self.capacity:
@@ -85,7 +85,7 @@ class DriveAPICommands(commands.Cog):
             )
         )
         
-        await ctx.respond(f"{self._wd_cache[ctx.author.id]}")
+        await ctx.respond(f"{self._wd_cache[ctx.author.id][0]}")
     
     @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
     async def cd(self, ctx: commands.Context, path=""):
@@ -131,35 +131,33 @@ class DriveAPICommands(commands.Cog):
         
         
         """
-        # locals_ = locals()
 
-        
-        # if path does contain contents of WD
-        # example: WD: /root/ CD: /root/branch -> WD: /root/branch
-        # if path in user_wd:
-        #     end_path = user_wd.find(path) + len(path)
-        # do some verification that the folder path is accessible from the current working directory
-        # do some regex to match first part of folder path -- and only append last part to pwd
-        # self.wd_cache[ctx.author.id] = f"{user_wd}{}"
         locals_ = locals()
+        last_path = self._wd_cache[ctx.author.id]
+        self._wd_cache[ctx.author.id][1] = last_path
         
         if path == "" or path == '~':
-            self._wd_cache[ctx.author.id] = pathlib.Path(self.root) 
+            # last_path = self._wd_cache[ctx.author.id]
+            self._wd_cache[ctx.author.id][0] = pathlib.Path(self.root) 
+            # self._wd_cache[ctx.author.id][1] = last_path
         
         elif path == '.':
             # say something like path not changed
             return
         
         elif path == "..":
-            cwd = self._wd_cache[ctx.author.id]
+            cwd = self._wd_cache[ctx.author.id][0]
             if cwd != pathlib.Path(self.root):
-                self._wd_cache[ctx.author.id] = cwd.parent # get first ancestor
+                self._wd_cache[ctx.author.id][0] = cwd.parent # get first ancestor
             else:
                 await ctx.respond(f"You are in the root directory.")
+                
+        elif path == '-':
+            self._wd_cache[ctx.author.id][0] = self._wd_cache[ctx.author.id][1]
 
         else:
             
-            folder = self.API.search(name=path, parent=self._wd_cache[ctx.author.id].name, files=False)
+            folder = self.API.search(name=path, parent=self._wd_cache[ctx.author.id][0].name, files=False)
             await ctx.respond(f"{folder}")
             
             if not folder:
