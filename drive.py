@@ -180,12 +180,10 @@ class DriveAPI:
             with ZipFile(filename, 'r') as zf:
                 zf.extractall("temp")
             os.remove(filename)
-            flist = []
-            for filename in os.listdir("temp"):
-                flist.append(self.upload(filename, guess_type(os.path.join("temp", filename))[0], path="temp", folder=folder))
-            return flist
+            flist = [self.upload(filename, guess_type(os.path.join("temp", filename))[0], path="temp", folder=folder) for filename in os.listdir("temp")]
+            return f"File{'s' if len(flist) != 1 else ''} {', '.join(flist)} uploaded!"
         except BadZipFile:
-            return self.upload(file.filename, file.content_type, path="temp", folder=folder)
+            return f"File {self.upload(file.filename, file.content_type, path='temp', folder=folder)} uploaded!"
             
         
 
