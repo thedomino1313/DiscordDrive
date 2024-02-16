@@ -7,6 +7,9 @@ from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+from googleapiclient.http import MediaFileUpload
+
+from discord import Attachment
 
 
 class DriveAPI:
@@ -18,7 +21,7 @@ class DriveAPI:
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     
     def _input_validator(func):
-        def validate(self, *args, **kwargs):
+        def _validate(self, *args, **kwargs):
             argspecs = getfullargspec(func)
             annotations = argspecs.annotations
             argnames = argspecs.args
@@ -29,8 +32,21 @@ class DriveAPI:
                 assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
                 assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             return func(self, *args, **kwargs)    
-        return validate
+        return _validate
     
+    def _temp_dir(path):
+        def _temp_decorator(func):
+            async def _temp_manager(self, *args, **kwargs):
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                ret = await func(self, *args, **kwargs)
+                for file in os.listdir(path):
+                    os.remove(os.path.join(path, file))
+                os.rmdir(path)
+                return ret
+            return _temp_manager
+        return _temp_decorator
+
     @_input_validator
     def __init__(self, root:str):
         if not root:
@@ -61,8 +77,7 @@ class DriveAPI:
             folder = self.search(name=self.root['name'], files=False)
             
             if not folder:
-                print("No folders found, check the root name.")
-                return
+                raise Exception("No folders found, check the root name.")
             folder = folder[0]
             self.root = folder
             self.folders[self.root['name']] = self.root['id']
@@ -112,7 +127,7 @@ class DriveAPI:
         """
         
         # Generate the search parameter for a file name
-        nameScript = f" and name contains '{name}'" if name else ""
+        nameScript = f" and name = '{name}'" if name else ""
 
         # Generate the search parameter for a parent folder
         try:
@@ -147,6 +162,34 @@ class DriveAPI:
             if (pageToken := results.get("nextPageToken", "")) and recursive:
                 return foundfiles + self.search(name=name, pageSize=pageSize, parent=parent, files=files, folders=folders, pageToken=pageToken, recursive=recursive)
             return foundfiles
+        except HttpError as error:
+            print(f"An error occurred: {error}")
+            return None
+
+    @_input_validator
+    @_temp_dir("temp")
+    async def upload_from_discord(self, file:Attachment, folder:str=""):
+        filename = f"temp/{file.filename}"
+        await file.save(filename)
+        return self.upload(file.filename, file.content_type, path="temp", folder=folder)
+        
+
+    @_input_validator
+    def upload(self, file:str, content_type:str, path:str=".", folder:str=""):
+        if not folder:
+            folder = self.root["name"]
+        
+        file_metadata = {"name": file, "parents": [self.folder_id_lookup(folder)]}
+        
+        media = MediaFileUpload(path + "/" + file, mimetype=content_type)
+        
+        try:
+            file = (
+                self.service.files()
+                .create(body=file_metadata, media_body=media, fields="name")
+                .execute()
+            )
+            return file["name"]
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
