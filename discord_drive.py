@@ -144,7 +144,7 @@ class DriveAPICommands(commands.Cog):
         locals_ = locals()
         
         if path == "" or path == '~':
-            self._wd_cache[ctx.author.id] = self.root
+            self._wd_cache[ctx.author.id] = pathlib.Path(self.root) 
         
         elif path == '.':
             # say something like path not changed
@@ -163,7 +163,7 @@ class DriveAPICommands(commands.Cog):
             await ctx.respond(f"{folder}")
             
             if not folder:
-                await ctx.respond(f"Folder {path} is not reachable from your current directory.")
+                await ctx.respond(f"{path} is not reachable from your current directory.")
                 return
 
             path = folder[0]["name"]
@@ -177,7 +177,7 @@ class DriveAPICommands(commands.Cog):
             )
         )
         
-        await ctx.respond(f"Path changed")
+        await ctx.respond(f"Directory changed")
         
     @commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
