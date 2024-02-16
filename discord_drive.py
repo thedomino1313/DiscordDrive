@@ -56,7 +56,7 @@ class DriveAPICommands(commands.Cog):
 
     # @with_call_order
     @commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
-    async def upload(self, ctx, file: discord.Attachment):
+    async def upload(self, ctx: commands.Context, file: discord.Attachment):
         
         locals_ = locals()
 
@@ -88,7 +88,7 @@ class DriveAPICommands(commands.Cog):
         await ctx.respond(f"{self._wd_cache[ctx.author.id]}")
     
     @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
-    async def cd(self, ctx, path=""):
+    async def cd(self, ctx: commands.Context, path=""):
             
         
         """
@@ -184,11 +184,11 @@ class DriveAPICommands(commands.Cog):
         pass
     
     @commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
-    async def mkdir(self, ctx, folder_name):
+    async def mkdir(self, ctx: commands.Context, folder_name):
         pass
         
     @commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
-    async def getn(self, ctx, n: int):
+    async def getn(self, ctx: commands.Context, n: int):
         locals_ = locals()
         
         try:
