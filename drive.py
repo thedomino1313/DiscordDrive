@@ -10,7 +10,8 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload
 
 from discord import Attachment
-
+from zipfile import ZipFile, BadZipFile
+from mimetypes import guess_type
 
 class DriveAPI:
     root = {"name":None, "id":None}
@@ -39,6 +40,9 @@ class DriveAPI:
             async def _temp_manager(self, *args, **kwargs):
                 if not os.path.exists(path):
                     os.mkdir(path)
+                else:
+                    for file in os.listdir(path):
+                        os.remove(os.path.join(path, file))
                 ret = await func(self, *args, **kwargs)
                 for file in os.listdir(path):
                     os.remove(os.path.join(path, file))
@@ -46,6 +50,7 @@ class DriveAPI:
                 return ret
             return _temp_manager
         return _temp_decorator
+    
 
     @_input_validator
     def __init__(self, root:str):
@@ -166,12 +171,22 @@ class DriveAPI:
             print(f"An error occurred: {error}")
             return None
 
-    @_input_validator
     @_temp_dir("temp")
+    @_input_validator
     async def upload_from_discord(self, file:Attachment, folder:str=""):
         filename = f"temp/{file.filename}"
         await file.save(filename)
-        return self.upload(file.filename, file.content_type, path="temp", folder=folder)
+        try:
+            with ZipFile(filename, 'r') as zf:
+                zf.extractall("temp")
+            os.remove(filename)
+            flist = []
+            for filename in os.listdir("temp"):
+                flist.append(self.upload(filename, guess_type(os.path.join("temp", filename))[0], path="temp", folder=folder))
+            return flist
+        except BadZipFile:
+            return self.upload(file.filename, file.content_type, path="temp", folder=folder)
+            
         
 
     @_input_validator
