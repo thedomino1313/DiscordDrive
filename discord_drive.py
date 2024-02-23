@@ -67,11 +67,13 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.defer()
         
         locals_ = locals()
-        name = await self.API.upload_from_discord(file=file, folder="Dev")
+        name = await self.API.upload_from_discord(file=file, folder=self._wd_cache[ctx.author.id][0].name)
         if name:
             await ctx.respond(name)
         else:
             return
+        
+        
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(
@@ -98,7 +100,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     async def cd(self, ctx: discord.ApplicationContext, path=""):
 
         locals_ = locals()
-        last_path = self._wd_cache[ctx.author.id]
+        last_path = self._wd_cache[ctx.author.id][0]
         self._wd_cache[ctx.author.id][1] = last_path
         
         if path == "" or path == '~':
@@ -123,14 +125,14 @@ class DriveAPICommands(discord.ext.commands.Cog):
         else:
             
             folder = self.API.search(name=path, parent=self._wd_cache[ctx.author.id][0].name, files=False)
-            await ctx.respond(f"{folder}")
+            # await ctx.respond(f"{folder}")
             
             if not folder:
                 await ctx.respond(f"{path} is not reachable from your current directory.")
                 return
 
             path = folder[0]["name"]
-            self._wd_cache[ctx.author.id] /= path
+            self._wd_cache[ctx.author.id][0] /= path
 
         self._save_to_history(
             id_=ctx.author.id,
@@ -147,8 +149,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
         pass
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
+    @has_permissions(administrator=True)
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
-        pass
+        
+        success = self.API.make_folder(name=folder_name, folder=self._wd_cache[ctx.author.id][0].name)
+        
+        if success:
+            await ctx.respond(f"Folder {folder_name} created at {self._wd_cache[ctx.author.id][0]}/{folder_name}")
+        else:
+            await ctx.respond("Could not create folder.")
         
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
