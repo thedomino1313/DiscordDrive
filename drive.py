@@ -21,6 +21,15 @@ class DriveAPI:
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
     
+    def empty_dir(self, path):
+        for file in os.listdir(path):
+            if os.path.isdir((newpath := os.path.join(path, file))):
+                self.empty_dir(newpath)
+                os.rmdir(newpath)
+            else:
+                os.remove(newpath)
+
+
     def _input_validator(func):
         def _validate(self, *args, **kwargs):
             argspecs = getfullargspec(func)
@@ -35,17 +44,16 @@ class DriveAPI:
             return func(self, *args, **kwargs)    
         return _validate
     
+    
     def _temp_dir(path):
         def _temp_decorator(func):
-            async def _temp_manager(self, *args, **kwargs):
+            async def _temp_manager(self: DriveAPI, *args, **kwargs):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
-                    for file in os.listdir(path):
-                        os.remove(os.path.join(path, file))
+                    self.empty_dir(path)
                 ret = await func(self, *args, **kwargs)
-                for file in os.listdir(path):
-                    os.remove(os.path.join(path, file))
+                self.empty_dir(path)
                 os.rmdir(path)
                 return ret
             return _temp_manager
@@ -65,14 +73,11 @@ class DriveAPI:
             creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
-            if creds and creds.expired and creds.refresh_token:
-                creds.refresh(Request())
-            else:
-                flow = InstalledAppFlow.from_client_secrets_file(
-                    "credentials.json", self.SCOPES
-                )
-                creds = flow.run_local_server(port=0)
-                # Save the credentials for the next run
+            flow = InstalledAppFlow.from_client_secrets_file(
+                "credentials.json", self.SCOPES
+            )
+            creds = flow.run_local_server(port=0)
+            # Save the credentials for the next run
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
 
@@ -180,7 +185,7 @@ class DriveAPI:
             with ZipFile(filename, 'r') as zf:
                 zf.extractall("temp")
             os.remove(filename)
-            flist = [self.upload(filename, guess_type(os.path.join("temp", filename))[0], path="temp", folder=folder) for filename in os.listdir("temp")]
+            flist = [self.upload(filename, mimetype, path="temp", folder=folder) for filename in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", filename))[0]) is not None]
             return f"File{'s' if len(flist) != 1 else ''} {', '.join(flist)} uploaded!"
         except BadZipFile:
             return f"File {self.upload(file.filename, file.content_type, path='temp', folder=folder)} uploaded!"
