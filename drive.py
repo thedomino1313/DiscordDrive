@@ -188,7 +188,10 @@ class DriveAPI:
         if not folder:
             folder = self.root["name"]
         
-        file_metadata = {"name": file, "parents": [self.folder_id_lookup(folder)]}
+        file_metadata = {
+            "name": file,
+            "mimeType": content_type,
+            "parents": [self.folder_id_lookup(folder)]}
         
         media = MediaFileUpload(path + "/" + file, mimetype=content_type)
         
@@ -203,6 +206,29 @@ class DriveAPI:
             print(f"An error occurred: {error}")
             return None
 
+    @_input_validator
+    def make_folder(self, name:str, folder:str=""):
+        if not folder:
+            folder = self.root["name"]
+        
+        file_metadata = {
+            "name": name,
+            "mimeType": "application/vnd.google-apps.folder",
+            "parents": [self.folder_id_lookup(folder)]
+        }
+        try:
+            file = (
+                self.service.files()
+                .create(body=file_metadata, fields="id")
+                .execute()
+            )
+            self.folders[name] = file["id"]
+            return True
+        except HttpError:
+            return False
+
+
 if __name__ == "__main__":
     API = DriveAPI("Textbooks")
-    print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
+    # print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
+    print(API.make_folder("Testing", "Dev"))
