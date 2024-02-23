@@ -1,5 +1,3 @@
-import os.path
-
 from inspect import getfullargspec
 
 from google.auth.transport.requests import Request
@@ -13,6 +11,8 @@ from discord import Attachment
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 
+from utils import *
+
 class DriveAPI:
     root = {"name":None, "id":None}
     
@@ -20,15 +20,6 @@ class DriveAPI:
 
     FOLDER_TYPE = "application/vnd.google-apps.folder"
     SCOPES = ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/drive.activity", "https://www.googleapis.com/auth/drive.metadata"]
-    
-    def empty_dir(self, path):
-        for file in os.listdir(path):
-            if os.path.isdir((newpath := os.path.join(path, file))):
-                self.empty_dir(newpath)
-                os.rmdir(newpath)
-            else:
-                os.remove(newpath)
-
 
     def _input_validator(func):
         def _validate(self, *args, **kwargs):
@@ -44,21 +35,19 @@ class DriveAPI:
             return func(self, *args, **kwargs)    
         return _validate
     
-    
     def _temp_dir(path):
         def _temp_decorator(func):
-            async def _temp_manager(self: DriveAPI, *args, **kwargs):
+            async def _temp_manager(self, *args, **kwargs):
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
-                    self.empty_dir(path)
+                    empty_dir(path)
                 ret = await func(self, *args, **kwargs)
-                self.empty_dir(path)
+                empty_dir(path)
                 os.rmdir(path)
                 return ret
             return _temp_manager
         return _temp_decorator
-    
 
     @_input_validator
     def __init__(self, root:str):
@@ -186,12 +175,14 @@ class DriveAPI:
                 zf.extractall("temp")
             os.remove(filename)
             flist = [self.upload(filename, mimetype, path="temp", folder=folder) for filename in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", filename))[0]) is not None]
-            return f"File{'s' if len(flist) != 1 else ''} {', '.join(flist)} uploaded!"
+            if len(flist) != len(os.listdir("temp")):
+                s = "Please ensure that there are no folders inside of the zip file, as they and their contents will not be uploaded.\n"
+            else: s = ""
+            return f"{s}File{'s' if len(flist) != 1 else ''} {', '.join(flist)} uploaded!"
         except BadZipFile:
             return f"File {self.upload(file.filename, file.content_type, path='temp', folder=folder)} uploaded!"
             
-        
-
+    
     @_input_validator
     def upload(self, file:str, content_type:str, path:str=".", folder:str=""):
         if not folder:
