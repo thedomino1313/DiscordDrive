@@ -146,7 +146,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
-        pass
+        
+        await ctx.respond('\n'.join([file["name"] for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True)]))
+        # for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True):
+        #     await ctx.respond(file["name"])
+        
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
