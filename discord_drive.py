@@ -84,15 +84,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
     async def pwd(self, ctx):
-        locals_ = locals()
+        # locals_ = locals()
 
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
+        # self._save_to_history(
+        #     id_=ctx.author.id,
+        #     command=Command(
+        #         str_=sys._getframe(0).f_code.co_name,
+        #         params=locals_
+        #     )
+        # )
         
         await ctx.respond(f"{self._wd_cache[ctx.author.id][0]}")
     
