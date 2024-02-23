@@ -1,15 +1,16 @@
-from inspect import getfullargspec
+from inspect import getfullargspec, isawaitable
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
-from googleapiclient.http import MediaFileUpload
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
-from discord import Attachment
+from discord import Attachment, File
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
+from io import BytesIO, open
 
 from utils import *
 
@@ -28,14 +29,14 @@ class DriveAPI:
             argnames = argspecs.args
             for val, arg in zip(args, argnames[1:len(args) + 1]):
                 assert val is not None, f"Argument '{arg}' is None, please do not use None as an argument"
-                assert type(val) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+                assert isinstance(val, annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             for arg in kwargs:
                 assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
-                assert type(kwargs[arg]) == annotations[arg], f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+                assert isinstance(kwargs[arg], annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             return func(self, *args, **kwargs)    
         return _validate
     
-    def _temp_dir(path):
+    def _temp_dir_async(path):
         def _temp_decorator(func):
             async def _temp_manager(self, *args, **kwargs):
                 if not os.path.exists(path):
@@ -43,6 +44,20 @@ class DriveAPI:
                 else:
                     empty_dir(path)
                 ret = await func(self, *args, **kwargs)
+                empty_dir(path)
+                os.rmdir(path)
+                return ret
+            return _temp_manager
+        return _temp_decorator
+    
+    def _temp_dir(path):
+        def _temp_decorator(func):
+            def _temp_manager(self, *args, **kwargs):
+                if not os.path.exists(path):
+                    os.mkdir(path)
+                else:
+                    empty_dir(path)
+                ret = func(self, *args, **kwargs)
                 empty_dir(path)
                 os.rmdir(path)
                 return ret
@@ -165,7 +180,7 @@ class DriveAPI:
             print(f"An error occurred: {error}")
             return None
 
-    @_temp_dir("temp")
+    @_temp_dir_async("temp")
     @_input_validator
     async def upload_from_discord(self, file:Attachment, folder:str=""):
         filename = f"temp/{file.filename}"
@@ -226,9 +241,49 @@ class DriveAPI:
             return True
         except HttpError:
             return False
+    
+    @_temp_dir("temp")
+    @_input_validator
+    def export(self, name:str, folder:str=""):
+        if not folder:
+            folder = self.root["name"]
+        
+        file = self.search(name=name, parent=folder, folders=False)
+        if not file:
+            return "File not found."
+
+        real_file_id = file[0]["id"]
+
+        try:
+            file_id = real_file_id
+
+            # pylint: disable=maybe-no-member
+            request = (
+                self.service.files()
+                .get_media(fileId=file_id)
+            )
+            file = BytesIO()
+            downloader = MediaIoBaseDownload(file, request)
+            done = False
+            while done is False:
+                status, done = downloader.next_chunk()
+                # print(f"Download {int(status.progress() * 100)}.")
+            filepath = os.path.join("temp", name)
+            with open(filepath, "wb") as f:
+                file.seek(0)
+                f.write(file.read())
+
+            fileObj = file = File(filepath)
+            return fileObj
+        
+        except HttpError:
+            return "An error occured retrieving this file."
+        
+        
+
 
 
 if __name__ == "__main__":
     API = DriveAPI("Textbooks")
     # print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
-    print(API.make_folder("Testing", "Dev"))
+    API.export("CogSciBook.pdf")
