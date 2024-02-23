@@ -146,22 +146,36 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
-        
+        locals_ = locals()
         await ctx.respond('\n'.join([file["name"] for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True)]))
         # for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True):
         #     await ctx.respond(file["name"])
-        
+        self._save_to_history(
+            id_=ctx.author.id,
+            command=Command(
+                str_=sys._getframe(0).f_code.co_name,
+                params=locals_
+            )
+        )
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
-        
+        locals_ = locals()
         success = self.API.make_folder(name=folder_name, folder=self._wd_cache[ctx.author.id][0].name)
         
         if success:
             await ctx.respond(f"Folder {folder_name} created at {self._wd_cache[ctx.author.id][0]}/{folder_name}")
         else:
             await ctx.respond("Could not create folder.")
+            
+        self._save_to_history(
+            id_=ctx.author.id,
+            command=Command(
+                str_=sys._getframe(0).f_code.co_name,
+                params=locals_
+            )
+        )
         
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
