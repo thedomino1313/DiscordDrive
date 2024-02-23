@@ -6,7 +6,7 @@ import sys
 from collections import defaultdict, deque
 from datetime import datetime
 from dotenv import load_dotenv
-from discord.ext import commands
+from discord.ext.commands import has_permissions, MissingPermissions
 from pprint import pprint
 from typing import List, Iterable
 
@@ -21,9 +21,9 @@ class Command:
         self._params = params
         self._timestamp = datetime.now()
 
-class DriveAPICommands(commands.Cog):
+class DriveAPICommands(discord.ext.commands.Cog):
     
-    def __init__(self, bot: commands.Bot, root: str):
+    def __init__(self, bot: discord.ext.commands.Bot, root: str):
         self.bot = bot
         self.root = root
         self.API = DriveAPI(root)
@@ -54,8 +54,15 @@ class DriveAPICommands(commands.Cog):
         
         return commands
 
+    # @discord.ext.commands.Cog.listener()
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, MissingPermissions):
+            await ctx.respond("You are missing permission(s) to run this command.")
+        else:
+            raise error
+
     # @with_call_order
-    @commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
+    @discord.ext.commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
     async def upload(self, ctx: discord.ApplicationContext, file: discord.Attachment):
         await ctx.defer()
         
@@ -73,7 +80,7 @@ class DriveAPICommands(commands.Cog):
             )
         )
     
-    @commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
+    @discord.ext.commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
     async def pwd(self, ctx):
         locals_ = locals()
 
@@ -87,50 +94,8 @@ class DriveAPICommands(commands.Cog):
         
         await ctx.respond(f"{self._wd_cache[ctx.author.id][0]}")
     
-    @commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
+    @discord.ext.commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
     async def cd(self, ctx: discord.ApplicationContext, path=""):
-            
-        
-        """
-        
-        cases:
-
-            In directory D... can always CD when given path starting with root
-            
-            SAME DIRECTORY
-            In directory D, user supplies absolute path to D
-                            user supplies alternate relative path to D
-                            
-            DIFFERENT DIRECTORY
-            In directory X, user supplies valid RELATIVE path to D
-                            user supplies valid ABSOLUTE path that starts at root
-                            
-            ..
-            Go up one level
-            
-            .
-            Refers to current directory
-            
-            ~
-            Root alias
-            
-            Unix, Unix-like
-            cd by itself or cd ~ will always put the user in their home directory.
-            cd . will leave the user in the same directory they are currently in (i.e. the current directory won't change). This can be useful if the user's shell's internal code can't deal with the directory they are in being recreated; running cd . will place their shell in the recreated directory.
-            X cd ~username will put the user in the username's home directory.
-            cd dir (without a /) will put the user in a subdirectory; for example, if they are in /usr, typing cd bin will put them in /usr/bin, while cd /bin puts them in /bin.
-            cd .. will move the user up one directory. So, if they are /usr/bin/tmp, cd .. moves them to /usr/bin, while cd ../.. moves them to /usr (i.e. up two levels). The user can use this indirection to access subdirectories too. So, from /usr/bin/tmp, they can use cd ../../local to go to /usr/local
-            cd - will switch the user to the previous directory. For example, if they are in /usr/bin/tmp, and go to /etc, they can type cd - to go back to /usr/bin/tmp. The user can use this to toggle back and forth between two directories without pushd and popd.
-
-            
-        
-        
-        
-        
-        
-        
-        
-        """
 
         locals_ = locals()
         last_path = self._wd_cache[ctx.author.id]
@@ -177,15 +142,16 @@ class DriveAPICommands(commands.Cog):
         
         await ctx.respond(f"Directory changed")
         
-    @commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
+    @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
         pass
     
-    @commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
+    @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
         pass
         
-    @commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
+    @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
+    @has_permissions(administrator=True)
     async def getn(self, ctx: discord.ApplicationContext, n: int):
         locals_ = locals()
         
