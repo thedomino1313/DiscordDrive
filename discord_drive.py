@@ -147,9 +147,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
         locals_ = locals()
-        await ctx.respond('\n'.join([file["name"] for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True)]))
+        
+        folder_type_mapping = {
+            True: chr(128193),
+            False: chr(128196)
+        }
+        
+        await ctx.respond('\n'.join([f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True)]))
         # for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True):
-        #     await ctx.respond(file["name"])
+        #     await ctx.respond(file)
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(
