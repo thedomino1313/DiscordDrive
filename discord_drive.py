@@ -152,6 +152,18 @@ class DriveAPICommands(discord.ext.commands.Cog):
         #     await ctx.respond(file["name"])
         
     
+    @discord.ext.commands.slash_command(name="export", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
+    async def export(self, ctx: discord.ApplicationContext, name: str):
+        await ctx.defer()
+
+        file = self.API.export(name=name, folder=self._wd_cache[ctx.author.id][0].name)
+
+        if isinstance(file, str):
+            await ctx.respond(file)
+        else:
+            await ctx.respond(file=file)
+        
+    
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
