@@ -11,6 +11,7 @@ from discord import Attachment, File
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 from io import BytesIO, open
+import sys
 
 from utils import *
 
@@ -64,6 +65,19 @@ class DriveAPI:
             return _temp_manager
         return _temp_decorator
 
+    # auth_url, _ = flow.authorization_url(prompt='consent')
+
+    # print('Please go to this URL: {}'.format(auth_url))
+
+    # # The user will get an authorization code. This code is used to get the
+    # # access token.
+    # code = input('Enter the authorization code: ')
+    # creds = flow.fetch_token(code=code)
+    # with open("token.json", "w") as token:
+    #   token.write(creds.to_json())
+
+
+    @_temp_dir("temp")
     @_input_validator
     def __init__(self, root:str):
         if not root:
@@ -77,13 +91,22 @@ class DriveAPI:
             creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
         # If there are no (valid) credentials available, let the user log in.
         if not creds or not creds.valid:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", self.SCOPES
-            )
-            creds = flow.run_local_server(port=0)
+            if creds and creds.expired and creds.refresh_token:
+                creds.refresh(Request())
+            else:
+                with open('temp/file.txt', 'w') as sys.stderr:
+                    flow = InstalledAppFlow.from_client_secrets_file(
+                        "credentials.json", self.SCOPES
+                    )
+                    creds = flow.run_local_server(port=0)
+
             # Save the credentials for the next run
             with open("token.json", "w") as token:
                 token.write(creds.to_json())
+
+        # If credentials need to be verified, we should notify the user and stop all commands from being executed.
+        # The code below should be in a separate function that either happens on init, or happens when authenticaion occurs
+        # Will need to make an authentication function that takes a ctx and can interact with the user to give them the link, receive the code, generate the json, and execute the code below
 
         try:
             self.service = build("drive", "v3", credentials=creds)
