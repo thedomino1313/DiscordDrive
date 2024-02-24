@@ -32,6 +32,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
         self._command_history = defaultdict(lambda: deque())
         self._wd_cache = defaultdict(lambda: [pathlib.Path(self.root), pathlib.Path(self.root)])
         
+    async def _API_ready(self, ctx: discord.ApplicationContext):
+        if not (result := bool(self.API.service)):
+            await ctx.respond("Please use `/authenticate` to validate your Google Account's credentials before using any commands!")
+        return result
+
     def _save_to_history(self, id_, command: Command):
         if len(self._command_history[id_]) == self.capacity:
             self._command_history[id_].popleft()
@@ -64,6 +69,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
     # @with_call_order
     @discord.ext.commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
     async def upload(self, ctx: discord.ApplicationContext, file: discord.Attachment):
+
+        if not await self._API_ready(ctx):
+            return
+        
         await ctx.defer()
         
         locals_ = locals()
@@ -84,6 +93,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
     async def pwd(self, ctx):
+
+        if not await self._API_ready(ctx):
+            return
+        
         # locals_ = locals()
 
         # self._save_to_history(
@@ -98,6 +111,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
     async def cd(self, ctx: discord.ApplicationContext, path=""):
+
+        if not await self._API_ready(ctx):
+            return
+        
 
         locals_ = locals()
         last_path = self._wd_cache[ctx.author.id][0]
@@ -146,6 +163,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
+
+        if not await self._API_ready(ctx):
+            return
+        
         locals_ = locals()
         
         folder_type_mapping = {
@@ -166,6 +187,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="export", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
     async def export(self, ctx: discord.ApplicationContext, name: str):
+
+        if not await self._API_ready(ctx):
+            return
+        
         await ctx.defer()
 
         file = self.API.export(name=name, folder=self._wd_cache[ctx.author.id][0].name)
@@ -179,6 +204,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
+
+        if not await self._API_ready(ctx):
+            return
+        
         locals_ = locals()
         success = self.API.make_folder(name=folder_name, folder=self._wd_cache[ctx.author.id][0].name)
         
@@ -194,10 +223,21 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 params=locals_
             )
         )
+    
+    
+    @discord.ext.commands.slash_command(name="authenticate", guild_ids=[os.getenv("DD_GUILD_ID")], description="Authenticate your google account")
+    @has_permissions(administrator=True)
+    async def authenticate(self, ctx: discord.ApplicationContext):
+        await ctx.defer()
+        await self.API.authenticate(ctx, self.bot)
         
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
     async def getn(self, ctx: discord.ApplicationContext, n: int):
+
+        if not await self._API_ready(ctx):
+            return
+        
         locals_ = locals()
         
         try:
