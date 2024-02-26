@@ -159,7 +159,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             )
         )
         
-        await ctx.respond(f"Directory changed")
+        await ctx.respond(f"Directory changed to `{self._wd_cache[ctx.author.id][0]}`")
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):

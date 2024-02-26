@@ -246,9 +246,9 @@ class DriveAPI:
             if len(flist) != len(os.listdir("temp")):
                 s = "Please ensure that there are no folders inside of the zip file, as they and their contents will not be uploaded.\n"
             else: s = ""
-            return f"{s}File{'s' if len(flist) != 1 else ''} {', '.join(flist)} uploaded!"
+            return f"{s}File{'s' if len(flist) != 1 else ''} `{', '.join(flist)}` uploaded!"
         except BadZipFile:
-            return f"File {self.upload(file.filename, file.content_type, path='temp', folder=folder)} uploaded!"
+            return f"File `{self.upload(file.filename, file.content_type, path='temp', folder=folder)}` uploaded!"
             
     
     @_input_validator
