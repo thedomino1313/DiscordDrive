@@ -179,9 +179,9 @@ class DriveAPI:
         """Modular search function that can find files and folders, with the option of a specified parent directory.
 
         Args:
-            filename (str, optional): Name of a specific file/folder to find. Defaults to ''.
+            file_name (str, optional): Name of a specific file/folder to find. Defaults to ''.
             parent (str, optional): Name of a parent folder to search inside of. Defaults to ''.
-            pageSize (int, optional): Number of results to return. Defaults to 1.
+            page_size (int, optional): Number of results to return. Defaults to 1.
             files (bool, optional): Enable searching for files. Defaults to True.
             folders (bool, optional): Enable searching for folders. Defaults to True.
             pageToken (str, optional): Token for the next page of results. Defaults to ''.
@@ -236,9 +236,9 @@ class DriveAPI:
 
     @_temp_dir_async("temp")
     @_input_validator
-    async def upload_from_discord(self, file_name:Attachment, parent:str=""):
-        file_name = f"temp/{file_name.filename}"
-        await file_name.save(file_name)
+    async def upload_from_discord(self, file:Attachment, parent:str=""):
+        file_name = f"temp/{file.filename}"
+        await file.save(file_name)
         try:
             with ZipFile(file_name, 'r') as zf:
                 zf.extractall("temp")
@@ -249,7 +249,7 @@ class DriveAPI:
             else: s = ""
             return f"{s}File{'s' if len(flist) != 1 else ''} `{', '.join(flist)}` uploaded!"
         except BadZipFile:
-            return f"File `{self.upload(file_name.filename, file_name.content_type, local_path='temp', parent=parent)}` uploaded!"
+            return f"File `{self.upload(file.filename, file.content_type, local_path='temp', parent=parent)}` uploaded!"
             
     
     @_input_validator
