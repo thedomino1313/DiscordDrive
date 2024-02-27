@@ -193,7 +193,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         }
         
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
-        await ctx.respond('\n'.join([f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)]))
+        file_list = [f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)]
+        await ctx.respond('\n'.join(file_list) if file_list else "This folder is empty!")
 
         self._save_to_history(
             id_=ctx.author.id,
