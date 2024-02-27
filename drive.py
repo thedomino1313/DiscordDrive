@@ -241,34 +241,34 @@ class DriveAPI:
             with ZipFile(file_name, 'r') as zf:
                 zf.extractall("temp")
             os.remove(file_name)
-            flist = [self.upload(filename, mimetype, localpath="temp", parent=parent) for filename in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", filename))[0]) is not None]
+            flist = [self.upload(file_name, mimetype, local_path="temp", parent=parent) for file_name in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", file_name))[0]) is not None]
             if len(flist) != len(os.listdir("temp")):
                 s = "Please ensure that there are no folders inside of the zip file, as they and their contents will not be uploaded.\n"
             else: s = ""
             return f"{s}File{'s' if len(flist) != 1 else ''} `{', '.join(flist)}` uploaded!"
         except BadZipFile:
-            return f"File `{self.upload(file_name.filename, file_name.content_type, localpath='temp', parent=parent)}` uploaded!"
+            return f"File `{self.upload(file_name.filename, file_name.content_type, local_path='temp', parent=parent)}` uploaded!"
             
     
     @_input_validator
-    def upload(self, filename:str, content_type:str, localpath:str=".", parent:str=""):
+    def upload(self, file_name:str, content_type:str, local_path:str=".", parent:str=""):
         if not parent:
             parent = self.root
         
         file_metadata = {
-            "name": filename,
+            "name": file_name,
             "mimeType": content_type,
             "parents": [parent]}
         
-        media = MediaFileUpload(localpath + "/" + filename, mimetype=content_type)
+        media = MediaFileUpload(local_path + "/" + file_name, mimetype=content_type)
         
         try:
-            filename = (
+            file_name = (
                 self.service.files()
                 .create(body=file_metadata, media_body=media, fields="name")
                 .execute()
             )
-            return filename["name"]
+            return file_name["name"]
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
