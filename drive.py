@@ -16,7 +16,8 @@ import sys
 from utils import *
 
 class DriveAPI:
-    root = ""
+    ROOT = ""
+    ROOT_ID = ""
     
     folders = dict()
 
@@ -82,7 +83,7 @@ class DriveAPI:
     def __init__(self, root:str):
         if not root:
             raise Exception("A root directory must be provided.")
-        self.root = root
+        self.ROOT = root
         creds = None
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
@@ -140,12 +141,13 @@ class DriveAPI:
         try:
             self.service = build("drive", "v3", credentials=creds)
 
-            folder = self.search(file_name=self.root, files=False)
+            folder = self.search(file_name=self.ROOT, files=False)
             
             if not folder:
                 raise Exception("No folders found, check the root name.")
             folder = folder[0]
-            self.root = folder["name"]
+            self.ROOT = folder["name"]
+            self.ROOT_ID = folder["id"]
             self.folders[folder['name']] = folder['id']
             print(f"Found folder '{folder['name']}' with id '{folder['id']}'")
         except HttpError as error:
@@ -253,7 +255,7 @@ class DriveAPI:
     @_input_validator
     def upload(self, file_name:str, content_type:str, local_path:str=".", parent:str=""):
         if not parent:
-            parent = self.root
+            parent = self.ROOT
         
         file_metadata = {
             "name": file_name,
@@ -276,7 +278,7 @@ class DriveAPI:
     @_input_validator
     def make_folder(self, file_name:str, parent:str=""):
         if not parent:
-            parent = self.root
+            parent = self.ROOT
         
         file_metadata = {
             "name": file_name,
@@ -298,7 +300,7 @@ class DriveAPI:
     @_input_validator
     def export(self, file_name:str, parent:str=""):
         if not parent:
-            parent = self.root
+            parent = self.ROOT
         
         file = self.search(file_name=file_name, parent=parent, folders=False)
         if not file:
