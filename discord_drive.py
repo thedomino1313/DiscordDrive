@@ -23,12 +23,16 @@ class Command:
 
 class DriveAPICommands(discord.ext.commands.Cog):
     
+    _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[]))
+    
     def __init__(self, bot: discord.ext.commands.Bot, root: str):
         self.bot = bot
         self.root = root
-        self.API = DriveAPI(root)
+        self.API = DriveAPI(self.root)
+        
         # self.root_alias = '~'
         self.capacity = 15
+        
         self._command_history = defaultdict(lambda: deque())
         self._wd_cache = defaultdict(lambda: [pathlib.Path(self.root), pathlib.Path(self.root)])
         
@@ -97,32 +101,25 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        # locals_ = locals()
-
-        # self._save_to_history(
-        #     id_=ctx.author.id,
-        #     command=Command(
-        #         str_=sys._getframe(0).f_code.co_name,
-        #         params=locals_
-        #     )
-        # )
-        
         await ctx.respond(f"{self._wd_cache[ctx.author.id][0]}")
     
     @discord.ext.commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
     async def cd(self, ctx: discord.ApplicationContext, path=""):
-
+        
         if not await self._API_ready(ctx):
             return
-        
-
+    
         locals_ = locals()
+        
+        folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
+        
         last_path = self._wd_cache[ctx.author.id][0]
         self._wd_cache[ctx.author.id][1] = last_path
         
         if path == "" or path == '~':
             # last_path = self._wd_cache[ctx.author.id]
-            self._wd_cache[ctx.author.id][0] = pathlib.Path(self.root) 
+            self._wd_cache[ctx.author.id][0] = pathlib.Path(self.root)
+            folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
             # self._wd_cache[ctx.author.id][1] = last_path
         
         elif path == '.':
@@ -133,22 +130,26 @@ class DriveAPICommands(discord.ext.commands.Cog):
             cwd = self._wd_cache[ctx.author.id][0]
             if cwd != pathlib.Path(self.root):
                 self._wd_cache[ctx.author.id][0] = cwd.parent # get first ancestor
+                folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
             else:
                 await ctx.respond(f"You are in the root directory.")
+                return
                 
         elif path == '-':
             self._wd_cache[ctx.author.id][0] = self._wd_cache[ctx.author.id][1]
+            folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
 
         else:
             
-            folder = self.API.search(name=path, parent=self._wd_cache[ctx.author.id][0].name, files=False)
+            user_current_path = self._wd_cache[ctx.author.id][0]
+            folder = self.API.search(name=path, parent=DriveAPICommands._drive_state[user_current_path]["id"], files=False)
             # await ctx.respond(f"{folder}")
             
             if not folder:
                 await ctx.respond(f"{path} is not reachable from your current directory.")
                 return
 
-            path = folder[0]["name"]
+            path, folder_id = folder[0]["name"], folder[0]["id"]
             self._wd_cache[ctx.author.id][0] /= path
 
         self._save_to_history(
@@ -158,6 +159,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 params=locals_
             )
         )
+        
+        folders = self.API.search(parent=folder_id, files=False, pageSize=100, recursive=True)
+        DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"] = folder_id
+        DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in folders]
         
         await ctx.respond(f"Directory changed to `{self._wd_cache[ctx.author.id][0]}`")
         
@@ -209,10 +214,17 @@ class DriveAPICommands(discord.ext.commands.Cog):
             return
         
         locals_ = locals()
-        success = self.API.make_folder(name=folder_name, folder=self._wd_cache[ctx.author.id][0].name)
+        
+        parent_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
+        success = self.API.make_folder(name=folder_name, folder=parent_id)
         
         if success:
             await ctx.respond(f"Folder {folder_name} created at {self._wd_cache[ctx.author.id][0]}/{folder_name}")
+            
+            folders = self.API.search(parent=parent_id, files=False, pageSize=100, recursive=True)
+            DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"] = parent_id
+            DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in folders]
+            
         else:
             await ctx.respond("Could not create folder.")
             
