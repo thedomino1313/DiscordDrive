@@ -112,11 +112,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
         await ctx.respond(f"{DriveAPICommands._wd_cache[ctx.author.id][0]}")
     
-    async def _get_dirs(ctx: discord.AutocompleteContext):
+    async def _get_folders(ctx: discord.AutocompleteContext):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["folders"]
 
     @discord.ext.commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
-    async def cd(self, ctx: discord.ApplicationContext, path: discord.Option(str, "Pick a folder", autocomplete=_get_dirs)):
+    async def cd(self, ctx: discord.ApplicationContext, path: discord.Option(str, "Pick a folder", autocomplete=discord.utils.basic_autocomplete(_get_folders))):
         
         if not await self._API_ready(ctx):
             return
