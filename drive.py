@@ -153,18 +153,18 @@ class DriveAPI:
             print(f"An error occurred: {error}")
 
 
-    @_input_validator
-    def folder_id_lookup(self, folder:str) -> str:
-        if not folder:
-            raise Exception("Folder name cannot be an empty string.")
-        try:
-            return self.folders[folder]
-        except:
-            found_folder = self.search(name=folder, files=False)[0]
-            if not found_folder:
-                raise HttpError("No folders were found")
-            self.folders[found_folder["name"]] = found_folder["id"]
-            return found_folder["id"]
+    # @_input_validator
+    # def folder_id_lookup(self, folder:str) -> str:
+    #     if not folder:
+    #         raise Exception("Folder name cannot be an empty string.")
+    #     try:
+    #         return self.folders[folder]
+    #     except:
+    #         found_folder = self.search(name=folder, files=False)[0]
+    #         if not found_folder:
+    #             raise HttpError("No folders were found")
+    #         self.folders[found_folder["name"]] = found_folder["id"]
+    #         return found_folder["id"]
 
     @_input_validator
     def update_folders(self, flist:list) -> None:
@@ -198,8 +198,7 @@ class DriveAPI:
 
         # Generate the search parameter for a parent folder
         try:
-            # Lookup the parent folder's ID
-            parentScript = f" and '{self.folder_id_lookup(parent)}' in parents" if parent else ""
+            parentScript = f" and '{parent}' in parents" if parent else ""
         except HttpError as error:
             print(f"The parent folder does not exist: {error}")
             return None, None
@@ -259,7 +258,7 @@ class DriveAPI:
         file_metadata = {
             "name": file,
             "mimeType": content_type,
-            "parents": [self.folder_id_lookup(folder)]}
+            "parents": [folder]}
         
         media = MediaFileUpload(path + "/" + file, mimetype=content_type)
         
@@ -282,7 +281,7 @@ class DriveAPI:
         file_metadata = {
             "name": name,
             "mimeType": "application/vnd.google-apps.folder",
-            "parents": [self.folder_id_lookup(folder)]
+            "parents": [folder]
         }
         try:
             file = (
