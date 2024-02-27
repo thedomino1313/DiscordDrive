@@ -28,7 +28,13 @@ class DriveAPICommands(discord.ext.commands.Cog):
     def __init__(self, bot: discord.ext.commands.Bot, root: str):
         self.bot = bot
         self.root = root
+        self.root_path = pathlib.Path(self.root)
         self.API = DriveAPI(self.root)
+        
+        if self.API.service is not None:
+            folders = self.API.search(parent=self.API.ROOT_ID, files=False, pageSize=100, recursive=True)
+            DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
+            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in folders]
         
         # self.root_alias = '~'
         self.capacity = 15
@@ -80,7 +86,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.defer()
         
         locals_ = locals()
-        name = await self.API.upload_from_discord(file=file, folder=self._wd_cache[ctx.author.id][0].name)
+        folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
+        name = await self.API.upload_from_discord(file=file, folder=folder_id)
         if name:
             await ctx.respond(name)
         else:
@@ -179,9 +186,9 @@ class DriveAPICommands(discord.ext.commands.Cog):
             False: chr(128196)
         }
         
-        await ctx.respond('\n'.join([f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True)]))
-        # for file in self.API.search(parent=self._wd_cache[ctx.author.id][0].name, files=True, pageSize=100, recursive=True):
-        #     await ctx.respond(file)
+        folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
+        await ctx.respond('\n'.join([f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=folder_id, files=True, pageSize=100, recursive=True)]))
+
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(
@@ -198,7 +205,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
         await ctx.defer()
 
-        file = self.API.export(name=name, folder=self._wd_cache[ctx.author.id][0].name)
+        folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
+        file = self.API.export(name=name, folder=folder_id)
 
         if isinstance(file, str):
             await ctx.respond(file)
@@ -242,6 +250,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
     async def authenticate(self, ctx: discord.ApplicationContext):
         await ctx.defer()
         await self.API.authenticate(ctx, self.bot)
+        
+        if self.API.service is not None:
+            folders = self.API.search(parent=self.API.ROOT_ID, files=False, pageSize=100, recursive=True)
+            DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
+            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in folders]
         
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
