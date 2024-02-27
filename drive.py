@@ -16,7 +16,8 @@ import sys
 from utils import *
 
 class DriveAPI:
-    root = ""
+    ROOT = ""
+    ROOT_ID = ""
     
     folders = dict()
 
@@ -82,7 +83,7 @@ class DriveAPI:
     def __init__(self, root:str):
         if not root:
             raise Exception("A root directory must be provided.")
-        self.root = root
+        self.ROOT = root
         creds = None
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
@@ -140,12 +141,13 @@ class DriveAPI:
         try:
             self.service = build("drive", "v3", credentials=creds)
 
-            folder = self.search(name=self.root, files=False)
+            folder = self.search(file_name=self.ROOT, files=False)
             
             if not folder:
                 raise Exception("No folders found, check the root name.")
             folder = folder[0]
-            self.root = folder["name"]
+            self.ROOT = folder["name"]
+            self.ROOT_ID = folder["id"]
             self.folders[folder['name']] = folder['id']
             print(f"Found folder '{folder['name']}' with id '{folder['id']}'")
         except HttpError as error:
@@ -153,18 +155,18 @@ class DriveAPI:
             print(f"An error occurred: {error}")
 
 
-    @_input_validator
-    def folder_id_lookup(self, folder:str) -> str:
-        if not folder:
-            raise Exception("Folder name cannot be an empty string.")
-        try:
-            return self.folders[folder]
-        except:
-            found_folder = self.search(name=folder, files=False)[0]
-            if not found_folder:
-                raise HttpError("No folders were found")
-            self.folders[found_folder["name"]] = found_folder["id"]
-            return found_folder["id"]
+    # @_input_validator
+    # def folder_id_lookup(self, folder:str) -> str:
+    #     if not folder:
+    #         raise Exception("Folder name cannot be an empty string.")
+    #     try:
+    #         return self.folders[folder]
+    #     except:
+    #         found_folder = self.search(name=folder, files=False)[0]
+    #         if not found_folder:
+    #             raise HttpError("No folders were found")
+    #         self.folders[found_folder["name"]] = found_folder["id"]
+    #         return found_folder["id"]
 
     @_input_validator
     def update_folders(self, flist:list) -> None:
@@ -173,11 +175,11 @@ class DriveAPI:
                 self.folders[file["name"]] = file["id"]
     
     @_input_validator
-    def search(self, name:str='', parent:str='', pageSize:int=1, files:bool=True, folders:bool=True, pageToken:str='', recursive:bool=False) -> list:
+    def search(self, file_name:str='', parent:str='', page_size:int=1, files:bool=True, folders:bool=True, page_token:str='', recursive:bool=False) -> list:
         """Modular search function that can find files and folders, with the option of a specified parent directory.
 
         Args:
-            name (str, optional): Name of a specific file/folder to find. Defaults to ''.
+            filename (str, optional): Name of a specific file/folder to find. Defaults to ''.
             parent (str, optional): Name of a parent folder to search inside of. Defaults to ''.
             pageSize (int, optional): Number of results to return. Defaults to 1.
             files (bool, optional): Enable searching for files. Defaults to True.
@@ -194,12 +196,11 @@ class DriveAPI:
         """
         
         # Generate the search parameter for a file name
-        nameScript = f" and name = '{name}'" if name else ""
+        nameScript = f" and name = '{file_name}'" if file_name else ""
 
         # Generate the search parameter for a parent folder
         try:
-            # Lookup the parent folder's ID
-            parentScript = f" and '{self.folder_id_lookup(parent)}' in parents" if parent else ""
+            parentScript = f" and '{parent}' in parents" if parent else ""
         except HttpError as error:
             print(f"The parent folder does not exist: {error}")
             return None, None
@@ -217,8 +218,8 @@ class DriveAPI:
         try:
             results = (
                 self.service.files()
-                .list(pageSize=pageSize, 
-                    pageToken=pageToken, 
+                .list(pageSize=page_size, 
+                    pageToken=page_token, 
                     q=f"trashed = false{mimeScript}{nameScript}{parentScript}", 
                     orderBy="folder, name", 
                     fields="nextPageToken, files(id, name, mimeType)")
@@ -226,8 +227,8 @@ class DriveAPI:
             )
             foundfiles = results.get("files", [])
             self.update_folders(foundfiles)
-            if (pageToken := results.get("nextPageToken", "")) and recursive:
-                return foundfiles + self.search(name=name, pageSize=pageSize, parent=parent, files=files, folders=folders, pageToken=pageToken, recursive=recursive)
+            if (page_token := results.get("nextPageToken", "")) and recursive:
+                return foundfiles + self.search(file_name=file_name, page_size=page_size, parent=parent, files=files, folders=folders, page_token=page_token, recursive=recursive)
             return foundfiles
         except HttpError as error:
             print(f"An error occurred: {error}")
@@ -235,54 +236,54 @@ class DriveAPI:
 
     @_temp_dir_async("temp")
     @_input_validator
-    async def upload_from_discord(self, file:Attachment, folder:str=""):
-        filename = f"temp/{file.filename}"
-        await file.save(filename)
+    async def upload_from_discord(self, file_name:Attachment, parent:str=""):
+        file_name = f"temp/{file_name.filename}"
+        await file_name.save(file_name)
         try:
-            with ZipFile(filename, 'r') as zf:
+            with ZipFile(file_name, 'r') as zf:
                 zf.extractall("temp")
-            os.remove(filename)
-            flist = [self.upload(filename, mimetype, path="temp", folder=folder) for filename in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", filename))[0]) is not None]
+            os.remove(file_name)
+            flist = [self.upload(file_name, mimetype, local_path="temp", parent=parent) for file_name in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", file_name))[0]) is not None]
             if len(flist) != len(os.listdir("temp")):
                 s = "Please ensure that there are no folders inside of the zip file, as they and their contents will not be uploaded.\n"
             else: s = ""
             return f"{s}File{'s' if len(flist) != 1 else ''} `{', '.join(flist)}` uploaded!"
         except BadZipFile:
-            return f"File `{self.upload(file.filename, file.content_type, path='temp', folder=folder)}` uploaded!"
+            return f"File `{self.upload(file_name.filename, file_name.content_type, local_path='temp', parent=parent)}` uploaded!"
             
     
     @_input_validator
-    def upload(self, file:str, content_type:str, path:str=".", folder:str=""):
-        if not folder:
-            folder = self.root
+    def upload(self, file_name:str, content_type:str, local_path:str=".", parent:str=""):
+        if not parent:
+            parent = self.ROOT
         
         file_metadata = {
-            "name": file,
+            "name": file_name,
             "mimeType": content_type,
-            "parents": [self.folder_id_lookup(folder)]}
+            "parents": [parent]}
         
-        media = MediaFileUpload(path + "/" + file, mimetype=content_type)
+        media = MediaFileUpload(local_path + "/" + file_name, mimetype=content_type)
         
         try:
-            file = (
+            file_name = (
                 self.service.files()
                 .create(body=file_metadata, media_body=media, fields="name")
                 .execute()
             )
-            return file["name"]
+            return file_name["name"]
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
 
     @_input_validator
-    def make_folder(self, name:str, folder:str=""):
-        if not folder:
-            folder = self.root
+    def make_folder(self, file_name:str, parent:str=""):
+        if not parent:
+            parent = self.ROOT
         
         file_metadata = {
-            "name": name,
+            "name": file_name,
             "mimeType": "application/vnd.google-apps.folder",
-            "parents": [self.folder_id_lookup(folder)]
+            "parents": [parent]
         }
         try:
             file = (
@@ -290,18 +291,18 @@ class DriveAPI:
                 .create(body=file_metadata, fields="id")
                 .execute()
             )
-            self.folders[name] = file["id"]
+            self.folders[file_name] = file["id"]
             return True
         except HttpError:
             return False
     
     @_temp_dir("temp")
     @_input_validator
-    def export(self, name:str, folder:str=""):
-        if not folder:
-            folder = self.root
+    def export(self, file_name:str, parent:str=""):
+        if not parent:
+            parent = self.ROOT
         
-        file = self.search(name=name, parent=folder, folders=False)
+        file = self.search(file_name=file_name, parent=parent, folders=False)
         if not file:
             return "File not found."
 
@@ -321,7 +322,7 @@ class DriveAPI:
             while done is False:
                 status, done = downloader.next_chunk()
                 # print(f"Download {int(status.progress() * 100)}.")
-            filepath = os.path.join("temp", name)
+            filepath = os.path.join("temp", file_name)
             with open(filepath, "wb") as f:
                 file.seek(0)
                 f.write(file.read())

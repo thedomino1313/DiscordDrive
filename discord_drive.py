@@ -86,8 +86,9 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.defer()
         
         locals_ = locals()
+
         folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
-        name = await self.API.upload_from_discord(file=file, folder=folder_id)
+        name = await self.API.upload_from_discord(file=file, parent=folder_id)
         if name:
             await ctx.respond(name)
         else:
@@ -149,7 +150,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         else:
             
             user_current_path = self._wd_cache[ctx.author.id][0]
-            folder = self.API.search(name=path, parent=DriveAPICommands._drive_state[user_current_path]["id"], files=False)
+            folder = self.API.search(file_name=path, parent=DriveAPICommands._drive_state[user_current_path]["id"], files=False)
+
             # await ctx.respond(f"{folder}")
             
             if not folder:
@@ -206,7 +208,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.defer()
 
         folder_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
-        file = self.API.export(name=name, folder=folder_id)
+        file = self.API.export(name=name, parent=folder_id)
 
         if isinstance(file, str):
             await ctx.respond(file)
@@ -222,9 +224,9 @@ class DriveAPICommands(discord.ext.commands.Cog):
             return
         
         locals_ = locals()
-        
+
         parent_id = DriveAPICommands._drive_state[self._wd_cache[ctx.author.id][0]]["id"]
-        success = self.API.make_folder(name=folder_name, folder=parent_id)
+        success = self.API.make_folder(file_name=folder_name, parent=parent_id)
         
         if success:
             await ctx.respond(f"Folder {folder_name} created at {self._wd_cache[ctx.author.id][0]}/{folder_name}")
