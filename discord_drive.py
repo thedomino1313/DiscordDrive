@@ -211,15 +211,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        await ctx.defer()
+        await ctx.response.defer(ephemeral=True)
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         file = self.API.export(file_name=name, parent=folder_id)
 
         if isinstance(file, str):
-            await ctx.send_response(file, ephemeral=True)
+            await ctx.send_followup(file, ephemeral=True)
         else:
-            await ctx.send_response(file=file, ephemeral=True)
+            await ctx.send_followup(file=file, ephemeral=True)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
