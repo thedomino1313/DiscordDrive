@@ -23,7 +23,7 @@ class Command:
 
 class DriveAPICommands(discord.ext.commands.Cog):
     
-    _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[]))
+    _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[], files=[]))
     _wd_cache = None
     
     def __init__(self, bot: discord.ext.commands.Bot, root: str):
@@ -33,9 +33,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
         self.API = DriveAPI(self.root)
         
         if self.API.service is not None:
-            folders = self.API.search(parent=self.API.ROOT_ID, files=False, page_size=100, recursive=True)
+            items = self.API.search(parent=self.API.ROOT_ID, page_size=100, recursive=True)
             DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
-            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in folders]
+            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
+            DriveAPICommands._drive_state[self.root_path]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
         # self.root_alias = '~'
         self.capacity = 15
@@ -91,6 +92,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         name = await self.API.upload_from_discord(file=file, parent=folder_id)
         if name:
+            files = self.API.search(parent=folder_id, folders=False, page_size=100, recursive=True)
+            DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in files]
             await ctx.send_response(name)
         else:
             return
@@ -174,9 +177,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
             )
         )
         
-        folders = self.API.search(parent=folder_id, files=False, page_size=100, recursive=True)
-        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = folder_id
-        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in folders]
+        items = self.API.search(parent=folder_id, page_size=100, recursive=True)
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = self.API.ROOT_ID
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
         await ctx.send_response(f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
         
@@ -205,8 +209,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
             )
         )
     
+    async def _get_files(ctx: discord.AutocompleteContext):
+        return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
+
     @discord.ext.commands.slash_command(name="export", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
-    async def export(self, ctx: discord.ApplicationContext, name: str):
+    async def export(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))):
 
         if not await self._API_ready(ctx):
             return
@@ -260,9 +267,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await self.API.authenticate(ctx, self.bot)
         
         if self.API.service is not None:
-            folders = self.API.search(parent=self.API.ROOT_ID, files=False, page_size=100, recursive=True)
+            items = self.API.search(parent=self.API.ROOT_ID, page_size=100, recursive=True)
             DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
-            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in folders]
+            DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
+            DriveAPICommands._drive_state[self.root_path]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)

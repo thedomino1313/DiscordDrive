@@ -258,19 +258,19 @@ class DriveAPI:
             parent = self.ROOT
         
         file_metadata = {
-            "name": file_name,
+            "name": file_name[:min(len(file_name), 100)],
             "mimeType": content_type,
             "parents": [parent]}
         
         media = MediaFileUpload(local_path + "/" + file_name, mimetype=content_type)
         
         try:
-            file_name = (
+            file = (
                 self.service.files()
                 .create(body=file_metadata, media_body=media, fields="name")
                 .execute()
             )
-            return file_name["name"]
+            return file["name"]
         except HttpError as error:
             print(f"An error occurred: {error}")
             return None
