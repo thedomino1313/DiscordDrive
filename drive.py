@@ -11,7 +11,7 @@ from discord import Attachment, File, ApplicationContext, Client, DMChannel
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 from io import BytesIO, open
-import sys
+from datetime import datetime, timedelta
 
 from utils import *
 
@@ -222,7 +222,7 @@ class DriveAPI:
                     pageToken=page_token, 
                     q=f"trashed = false{mimeScript}{nameScript}{parentScript}", 
                     orderBy="folder, name", 
-                    fields="nextPageToken, files(id, name, mimeType)")
+                    fields="nextPageToken, files(id, name, mimeType, size)")
                 .execute()
             )
             foundfiles = results.get("files", [])
@@ -308,6 +308,18 @@ class DriveAPI:
 
         real_file_id = file[0]["id"]
 
+        if int(file[0]['size'])/1048576 > 8:
+            permissions = {
+                'type': 'anyone',
+                'role': 'reader',
+                "expirationTime": (datetime.now() + timedelta(minutes=2)).astimezone().isoformat()
+            }
+            
+            self.service.permissions().create(fileId=real_file_id, body=permissions).execute()
+
+            return f'https://drive.google.com/file/d/{real_file_id}/view?usp=sharing'
+
+
         try:
             file_id = real_file_id
 
@@ -333,11 +345,16 @@ class DriveAPI:
         except HttpError:
             return "An error occured retrieving this file."
         
-        
+    def revoke_sharing(self, file_id:str):
+        permissions = {
+            'type': 'anyone',
+            'role': 'reader'
+        }
+        self.service.permissions().delete(fileId=file_id, permissionID="anyoneWithLink").execute()
 
 
 
 if __name__ == "__main__":
     API = DriveAPI("Textbooks")
-    # print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']}" for result in API.search(pageSize=100, parent=API.root["name"])]))
-    API.export("CogSciBook.pdf")
+    # print("\n".join([f"{result['name']} is of type {result['mimeType']} with ID {result['id']} and size {result['size']}" for result in API.search(page_size=100, folders=False, parent=API.ROOT_ID)]))
+    print(API.export("15L2SwoxFWUtcK6lNbblGMWOvI4qgW68E"))

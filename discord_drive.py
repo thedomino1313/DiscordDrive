@@ -8,7 +8,8 @@ from datetime import datetime
 from dotenv import load_dotenv
 from discord.ext.commands import has_permissions, MissingPermissions
 from pprint import pprint
-from typing import List, Iterable
+from typing import List
+from asyncio import TimeoutError
 
 
 from drive import DriveAPI
@@ -224,7 +225,21 @@ class DriveAPICommands(discord.ext.commands.Cog):
         file = self.API.export(file_name=name, parent=folder_id)
 
         if isinstance(file, str):
-            await ctx.send_followup(file, ephemeral=True)
+            message = await ctx.send_followup(file, ephemeral=True)
+
+            await message.add_reaction("✅")
+
+            def check(reaction, user):
+                return user == ctx.author and str(reaction.emoji) == ":white_check_mark:"
+                
+            while True:
+                try:
+                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60, check=check)
+                    self.API.revoke_sharing(file[32:-17])
+                    break
+                except TimeoutError:
+                    self.API.revoke_sharing(file[32:-17])
+                    break
         else:
             await ctx.send_followup(file=file, ephemeral=True)
         
