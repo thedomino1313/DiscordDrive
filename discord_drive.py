@@ -46,7 +46,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
     async def _API_ready(self, ctx: discord.ApplicationContext):
         if not (result := bool(self.API.service)):
-            await ctx.respond("Please use `/authenticate` to validate your Google Account's credentials before using any commands!")
+            await ctx.send_response("Please use `/authenticate` to validate your Google Account's credentials before using any commands!")
         return result
 
     def _save_to_history(self, id_, command: Command):
@@ -74,7 +74,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     # @discord.ext.commands.Cog.listener()
     async def cog_command_error(self, ctx, error):
         if isinstance(error, MissingPermissions):
-            await ctx.respond("You are missing permission(s) to run this command.")
+            await ctx.send_response("You are missing permission(s) to run this command.")
         else:
             raise error
 
@@ -94,7 +94,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if name:
             files = self.API.search(parent=folder_id, folders=False, page_size=100, recursive=True)
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in files]
-            await ctx.respond(name)
+            await ctx.send_response(name)
         else:
             return
         
@@ -113,7 +113,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        await ctx.respond(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
+        await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
+        # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
     
     async def _get_folders(ctx: discord.AutocompleteContext):
         return ["~", "..", *DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["folders"]]
@@ -147,7 +148,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 DriveAPICommands._wd_cache[ctx.author.id][0] = cwd.parent # get first ancestor
                 folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
             else:
-                await ctx.respond(f"You are in the root directory.")
+                await ctx.send_response(f"You are in the root directory.")
                 return
                 
         elif path == '-':
@@ -159,10 +160,10 @@ class DriveAPICommands(discord.ext.commands.Cog):
             user_current_path = DriveAPICommands._wd_cache[ctx.author.id][0]
             folder = self.API.search(file_name=path, parent=DriveAPICommands._drive_state[user_current_path]["id"], files=False)
 
-            # await ctx.respond(f"{folder}")
+            # await ctx.send_response(f"{folder}")
             
             if not folder:
-                await ctx.respond(f"{path} is not reachable from your current directory.")
+                await ctx.send_response(f"{path} is not reachable from your current directory.")
                 return
 
             path, folder_id = folder[0]["name"], folder[0]["id"]
@@ -181,7 +182,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
-        await ctx.respond(f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
+        await ctx.send_response(f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx):
@@ -198,7 +199,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         file_list = [f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)]
-        await ctx.respond('\n'.join(file_list) if file_list else "This folder is empty!")
+        await ctx.send_response('\n'.join(file_list) if file_list else "This folder is empty!")
 
         self._save_to_history(
             id_=ctx.author.id,
@@ -217,15 +218,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        await ctx.defer()
+        await ctx.response.defer(ephemeral=True)
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
-        file = self.API.export(name=name, parent=folder_id)
+        file = self.API.export(file_name=name, parent=folder_id)
 
         if isinstance(file, str):
-            await ctx.respond(file)
+            await ctx.send_followup(file, ephemeral=True)
         else:
-            await ctx.respond(file=file)
+            await ctx.send_followup(file=file, ephemeral=True)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
@@ -241,14 +242,14 @@ class DriveAPICommands(discord.ext.commands.Cog):
         success = self.API.make_folder(file_name=folder_name, parent=parent_id)
         
         if success:
-            await ctx.respond(f"Folder {folder_name} created at {DriveAPICommands._wd_cache[ctx.author.id][0]}/{folder_name}")
+            await ctx.send_response(f"Folder {folder_name} created at {DriveAPICommands._wd_cache[ctx.author.id][0]}/{folder_name}")
             
             folders = self.API.search(parent=parent_id, files=False, page_size=100, recursive=True)
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = parent_id
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in folders]
             
         else:
-            await ctx.respond("Could not create folder.")
+            await ctx.send_response("Could not create folder.")
             
         self._save_to_history(
             id_=ctx.author.id,
@@ -283,7 +284,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         try:
             commands = self._get_last_commands(ctx.author.id, int(n))
         except IndexError:
-            await ctx.respond("Error retrieving commands")
+            await ctx.send_response("Error retrieving commands")
             return
             
         
@@ -299,4 +300,4 @@ class DriveAPICommands(discord.ext.commands.Cog):
         )
         
         # print(locals_)
-        await ctx.respond("Commands printed")
+        await ctx.send_response("Commands printed")
