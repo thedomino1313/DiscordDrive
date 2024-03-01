@@ -306,7 +306,7 @@ class DriveAPI:
         if not file:
             return "File not found."
 
-        real_file_id = file[0]["id"]
+        file_id = file[0]["id"]
 
         if int(file[0]['size'])/1048576 > 8:
             permissions = {
@@ -315,14 +315,12 @@ class DriveAPI:
                 "expirationTime": (datetime.now() + timedelta(minutes=2)).astimezone().isoformat()
             }
             
-            self.service.permissions().create(fileId=real_file_id, body=permissions).execute()
+            self.service.permissions().create(fileId=file_id, body=permissions).execute()
 
-            return f'https://drive.google.com/file/d/{real_file_id}/view?usp=sharing'
+            return f'https://drive.google.com/file/d/{file_id}/view?usp=sharing'
 
 
         try:
-            file_id = real_file_id
-
             # pylint: disable=maybe-no-member
             request = (
                 self.service.files()
@@ -350,7 +348,7 @@ class DriveAPI:
             'type': 'anyone',
             'role': 'reader'
         }
-        self.service.permissions().delete(fileId=file_id, permissionID="anyoneWithLink").execute()
+        self.service.permissions().delete(fileId=file_id, permissionId="anyoneWithLink").execute()
 
 
 

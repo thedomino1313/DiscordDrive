@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 from discord.ext.commands import has_permissions, MissingPermissions
 from pprint import pprint
 from typing import List
-from asyncio import TimeoutError
+from asyncio import sleep
 
 
 from drive import DriveAPI
@@ -225,23 +225,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
         file = self.API.export(file_name=name, parent=folder_id)
 
         if isinstance(file, str):
-            message = await ctx.send_followup(file, ephemeral=True)
-
-            await message.add_reaction("✅")
-
-            def check(reaction, user):
-                return user == ctx.author and str(reaction.emoji) == ":white_check_mark:"
-                
-            while True:
-                try:
-                    reaction, user = await self.bot.wait_for("reaction_add", timeout=60, check=check)
-                    self.API.revoke_sharing(file[32:-17])
-                    break
-                except TimeoutError:
-                    self.API.revoke_sharing(file[32:-17])
-                    break
+            await ctx.send_followup(file, ephemeral=True, delete_after=60)
+            await sleep(60)
+            self.API.revoke_sharing(file[32:-17])
         else:
-            await ctx.send_followup(file=file, ephemeral=True)
+            await ctx.send_followup(file=file, ephemeral=True, delete_after=60)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
