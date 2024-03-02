@@ -214,7 +214,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
 
     @discord.ext.commands.slash_command(name="export", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
-    async def export(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))):
+    async def export(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))): # type: ignore
 
         if not await self._API_ready(ctx):
             return
