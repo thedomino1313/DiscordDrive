@@ -298,7 +298,7 @@ class DriveAPI:
     
     @_temp_dir("temp")
     @_input_validator
-    def export(self, file_name:str, parent:str=""):
+    def export(self, file_name:str, parent:str="", limit=8388608):
         if not parent:
             parent = self.ROOT
         
@@ -308,7 +308,7 @@ class DriveAPI:
 
         file_id = file[0]["id"]
 
-        if int(file[0]['size'])/1048576 > 8:
+        if int(file[0]['size']) >= limit:
             permissions = {
                 'type': 'anyone',
                 'role': 'reader',
@@ -344,10 +344,6 @@ class DriveAPI:
             return "An error occured retrieving this file."
         
     def revoke_sharing(self, file_id:str):
-        permissions = {
-            'type': 'anyone',
-            'role': 'reader'
-        }
         self.service.permissions().delete(fileId=file_id, permissionId="anyoneWithLink").execute()
 
 
