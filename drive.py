@@ -298,7 +298,7 @@ class DriveAPI:
     
     @_temp_dir("temp")
     @_input_validator
-    def export(self, file_name:str, parent:str="", limit=8388608):
+    def export(self, file_name:str, parent:str="", limit:int=8388608):
         if not parent:
             parent = self.ROOT
         
