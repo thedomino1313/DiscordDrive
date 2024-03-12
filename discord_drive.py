@@ -114,9 +114,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        await ctx.send_response(f"{ctx.guild.filesize_limit}", ephemeral=True)
-        # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
-        # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
+        await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
     
     async def _get_folders(ctx: discord.AutocompleteContext):
         return ["~", "..", *DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["folders"]]
