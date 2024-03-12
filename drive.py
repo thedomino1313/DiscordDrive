@@ -317,7 +317,7 @@ class DriveAPI:
             
             self.service.permissions().create(fileId=file_id, body=permissions).execute()
 
-            return f'https://drive.google.com/file/d/{file_id}/view?usp=sharing'
+            return f'[{file_name}](<https://drive.google.com/file/d/{file_id}/view?usp=sharing>)'
 
 
         try:
