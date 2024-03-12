@@ -245,10 +245,20 @@ class DriveAPICommands(discord.ext.commands.Cog):
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
 
+
         if isinstance(file, str):
-            await ctx.send_followup(file, ephemeral=True, delete_after=60)
+            embed = discord.Embed(
+                title=f"Export",
+                color=discord.Colour.blurple(), # Pycord provides a class with default colors you can choose from
+            )
+            
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+            # embed.set_footer(text=DriveAPICommands._wd_cache[ctx.author.id][0])
+            embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
+            
+            await ctx.send_followup(embed=embed, ephemeral=True, delete_after=60)
             await sleep(60)
-            self.API.revoke_sharing(file[32:-17])
+            self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
         else:
             await ctx.send_followup(file=file, ephemeral=True, delete_after=60)
         
