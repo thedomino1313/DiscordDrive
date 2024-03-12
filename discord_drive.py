@@ -114,7 +114,29 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if not await self._API_ready(ctx):
             return
         
-        await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
+        embed = discord.Embed(
+            title=f"Current Working Directory",
+            description=f"{DriveAPICommands._wd_cache[ctx.author.id][0]}",
+            color=discord.Colour.blurple(), # Pycord provides a class with default colors you can choose from
+        )
+        
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        
+        folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
+        
+        items = self.API.search(parent=folder_id, page_size=100, recursive=True)
+        folders = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
+        files = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
+        
+        embed.add_field(name="Folders", value=f"{len(folders)}", inline=True)
+        embed.add_field(name="Files", value=f"{len(files)}", inline=True)
+    
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = folder_id
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = folders
+        DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = files
+        
+        await ctx.send_response(embed=embed, ephemeral=True)
+        # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
     
     async def _get_folders(ctx: discord.AutocompleteContext):
         return ["~", "..", *DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["folders"]]
