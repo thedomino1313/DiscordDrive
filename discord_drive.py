@@ -73,7 +73,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         return commands
 
     # @discord.ext.commands.Cog.listener()
-    async def cog_command_error(self, ctx, error):
+    async def cog_command_error(self, ctx: discord.ApplicationContext, error):
         if isinstance(error, MissingPermissions):
             await ctx.send_response("You are missing permission(s) to run this command.")
         else:
@@ -207,7 +207,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.send_response(f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
-    async def ls(self, ctx):
+    async def ls(self, ctx: discord.ApplicationContext):
 
         if not await self._API_ready(ctx):
             return
