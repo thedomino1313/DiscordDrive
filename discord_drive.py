@@ -109,12 +109,13 @@ class DriveAPICommands(discord.ext.commands.Cog):
         )
     
     @discord.ext.commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
-    async def pwd(self, ctx):
+    async def pwd(self, ctx: discord.ApplicationContext):
 
         if not await self._API_ready(ctx):
             return
         
-        await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
+        await ctx.send_response(f"{ctx.guild.filesize_limit}", ephemeral=True)
+        # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
         # await ctx.send_response(f"`{DriveAPICommands._wd_cache[ctx.author.id][0]}`", ephemeral=True)
     
     async def _get_folders(ctx: discord.AutocompleteContext):
@@ -222,7 +223,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         await ctx.response.defer(ephemeral=True)
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
-        file = self.API.export(file_name=name, parent=folder_id)
+        file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
 
         if isinstance(file, str):
             await ctx.send_followup(file, ephemeral=True, delete_after=60)
