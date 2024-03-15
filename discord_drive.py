@@ -1,7 +1,11 @@
+import cv2
 import discord
+import numpy as np
 import os
 import pathlib
 import sys
+import urllib
+
 
 from collections import defaultdict, deque
 from datetime import datetime
@@ -71,6 +75,19 @@ class DriveAPICommands(discord.ext.commands.Cog):
             commands.append(self._get_last_command(id_))
         
         return commands
+    
+    async def _get_user_color(self, ctx: discord.ApplicationContext) -> discord.Colour:
+        avatar_byte_array = await ctx.author.display_avatar.with_format("png").read()
+        arr = np.asarray(bytearray(avatar_byte_array), dtype=np.uint8)
+        img = cv2.imdecode(arr, -1)
+        
+        red = int(np.average(img[:, :, 0]))
+        green = int(np.average(img[:, :, 1]))
+        blue = int(np.average(img[:, :, 2]))
+        
+        color_as_hex = int(f"0x{red:02x}{green:02x}{blue:02x}", base=16)
+
+        return discord.Colour(color_as_hex)
 
     # @discord.ext.commands.Cog.listener()
     async def cog_command_error(self, ctx, error):
@@ -113,13 +130,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
         if not await self._API_ready(ctx):
             return
+
+        user_color = await self._get_user_color(ctx)
         
         embed = discord.Embed(
             title=f"Current Working Directory",
             description=f"{DriveAPICommands._wd_cache[ctx.author.id][0]}",
-            color=discord.Colour.blurple(), # Pycord provides a class with default colors you can choose from
+            color=user_color, # Pycord provides a class with default colors you can choose from
         )
-        
+
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
