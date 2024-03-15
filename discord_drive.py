@@ -108,11 +108,24 @@ class DriveAPICommands(discord.ext.commands.Cog):
         locals_ = locals()
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
-        name = await self.API.upload_from_discord(file=file, parent=folder_id)
-        if name:
+        result = await self.API.upload_from_discord(file=file, parent=folder_id)
+        if result:
             files = self.API.search(parent=folder_id, folders=False, page_size=100, recursive=True)
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in files]
-            await ctx.send_followup(name)
+
+            user_color = await self._get_user_color(ctx)
+            embed = discord.Embed(
+                title=f"Upload Files",
+                color=user_color, # Pycord provides a class with default colors you can choose from
+            )
+
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+            embed.add_field(name="", value=result, inline=True)
+
+            embed.set_footer(text=DriveAPICommands._wd_cache[ctx.author.id][0])
+
+            await ctx.send_followup(embed=embed)
         else:
             return
         
@@ -173,6 +186,14 @@ class DriveAPICommands(discord.ext.commands.Cog):
         last_path = DriveAPICommands._wd_cache[ctx.author.id][0]
         DriveAPICommands._wd_cache[ctx.author.id][1] = last_path
         
+        user_color = await self._get_user_color(ctx)
+        embed = discord.Embed(
+            title=f"Change Directory",
+            color=user_color, # Pycord provides a class with default colors you can choose from
+        )
+
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
         if path == "" or path == '~':
             # last_path = DriveAPICommands._wd_cache[ctx.author.id]
             DriveAPICommands._wd_cache[ctx.author.id][0] = pathlib.Path(self.root)
@@ -189,7 +210,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 DriveAPICommands._wd_cache[ctx.author.id][0] = cwd.parent # get first ancestor
                 folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
             else:
-                await ctx.send_response(f"You are in the root directory.")
+                embed.add_field(name="", value="You are in the root directory.", inline=True)
+                await ctx.send_response(embed=embed)
                 return
                 
         elif path == '-':
@@ -204,7 +226,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
             # await ctx.send_response(f"{folder}")
             
             if not folder:
-                await ctx.send_response(f"{path} is not reachable from your current directory.")
+                embed.add_field(name="", value=f"{path} is not reachable from your current directory.", inline=True)
+                await ctx.send_response(embed=embed)
                 return
 
             path, folder_id = folder[0]["name"], folder[0]["id"]
@@ -223,7 +246,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
-        await ctx.send_response(f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`")
+        embed.add_field(name="", value=f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`", inline=True)
+        await ctx.send_response(embed=embed)
         
     @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
     async def ls(self, ctx: discord.ApplicationContext):
@@ -266,13 +290,14 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
 
         if isinstance(file, str):
+            user_color = await self._get_user_color(ctx)
             embed = discord.Embed(
                 title=f"Export",
-                color=discord.Colour.blurple(), # Pycord provides a class with default colors you can choose from
+                color=user_color,
             )
             
             embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-            # embed.set_footer(text=DriveAPICommands._wd_cache[ctx.author.id][0])
+
             embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
             
             await ctx.send_followup(embed=embed, ephemeral=True, delete_after=60)
@@ -294,15 +319,25 @@ class DriveAPICommands(discord.ext.commands.Cog):
         parent_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         success = self.API.make_folder(file_name=folder_name, parent=parent_id)
         
+        user_color = await self._get_user_color(ctx)
+        embed = discord.Embed(
+            title=f"Make Directory",
+            color=user_color,
+        )
+        
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
         if success:
-            await ctx.send_response(f"Folder {folder_name} created at {DriveAPICommands._wd_cache[ctx.author.id][0]}/{folder_name}")
+            embed.add_field(name="", value=f"Folder {folder_name} created at `{DriveAPICommands._wd_cache[ctx.author.id][0]}/{folder_name}`", inline=True)
+            await ctx.send_response(embed=embed)
             
             folders = self.API.search(parent=parent_id, files=False, page_size=100, recursive=True)
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = parent_id
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["folders"] = [folder["name"] for folder in folders]
             
         else:
-            await ctx.send_response("Could not create folder.")
+            embed.add_field(name="", value="Could not create folder.", inline=True)
+            await ctx.send_response(embed=embed)
             
         self._save_to_history(
             id_=ctx.author.id,
@@ -324,7 +359,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
             DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
             DriveAPICommands._drive_state[self.root_path]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
-        
+    
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
     async def getn(self, ctx: discord.ApplicationContext, n: int):
