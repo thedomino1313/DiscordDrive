@@ -95,7 +95,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         if name:
             files = self.API.search(parent=folder_id, folders=False, page_size=100, recursive=True)
             DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in files]
-            await ctx.send_response(name)
+            await ctx.send_followup(name)
         else:
             return
         

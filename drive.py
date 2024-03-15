@@ -8,7 +8,7 @@ from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 from discord import Attachment, File, ApplicationContext, Client, DMChannel
-from zipfile import ZipFile, BadZipFile
+from zipfile import ZipFile, BadZipFile, is_zipfile
 from mimetypes import guess_type
 from io import BytesIO, open
 from datetime import datetime, timedelta
@@ -240,6 +240,8 @@ class DriveAPI:
         file_name = f"temp/{file.filename}"
         await file.save(file_name)
         try:
+            print(guess_type(file_name))
+            if 'zip' not in guess_type(file_name)[0]: raise BadZipFile
             with ZipFile(file_name, 'r') as zf:
                 zf.extractall("temp")
             os.remove(file_name)
