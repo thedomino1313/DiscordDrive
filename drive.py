@@ -7,8 +7,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
-from discord import Attachment, File, ApplicationContext, Client, DMChannel
-from zipfile import ZipFile, BadZipFile, is_zipfile
+from discord import Attachment, File, ApplicationContext, Client, DMChannel, Embed
+from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 from io import BytesIO, open
 from datetime import datetime, timedelta
@@ -106,8 +106,17 @@ class DriveAPI:
 
     @_input_validator
     async def authenticate(self, ctx: ApplicationContext, bot: Client):
+        embed = Embed(
+            title="Check your DMs!",
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
         if self.service:
-            await ctx.respond("You are already authenticated!")
+            embed.title="You are already authenticated!"
+            
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+            await ctx.respond(embed=embed)
             return
 
         flow = InstalledAppFlow.from_client_secrets_file(
@@ -117,7 +126,8 @@ class DriveAPI:
         
         auth_url, _ = flow.authorization_url(prompt='consent', )
 
-        response = await ctx.respond("Check your DMs!")
+        response = await ctx.respond(embed=embed)
+        
         await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
 
         def check(m):
@@ -133,8 +143,10 @@ class DriveAPI:
 
         self.create_service(creds)
 
-        await ctx.author.send("Authentication Complete!")
-        await response.edit("Authentication Complete!")
+        embed.title = "Authentication Complete!"
+        
+        await ctx.author.send(embed=embed)
+        await response.edit(embed=embed)
 
     @_input_validator
     def create_service(self, creds: Credentials):
