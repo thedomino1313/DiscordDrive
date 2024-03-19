@@ -268,6 +268,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
             p = math.pow(1024, i)
             s = round(size_bytes / p, 2)
             return f"{s} {size_name[i]}"
+
+        def shorten_name(name: str, folder: bool):
+            if folder: name = name.rsplit(".", 1)[0]
+            if len(name) < 43: return name
+            else: return name[:41] + "..."
         
         folder_type_mapping = {
             True: chr(128193),
@@ -279,9 +284,9 @@ class DriveAPICommands(discord.ext.commands.Cog):
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         
         items = self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)
-        items_per_page = 5
+        items_per_page = 10
         
-        item_icon_list = [f"{folder_type_mapping[item['mimeType'].startswith(self.API.FOLDER_TYPE)]} {item['name']}" for item in items]
+        item_icon_list = [f"{folder_type_mapping[item['mimeType'].startswith(self.API.FOLDER_TYPE)]} {shorten_name(item['name'], not item['mimeType'].startswith(self.API.FOLDER_TYPE))}" for item in items]
         item_size_list = [convert_size(int(item['size'])) if not item['mimeType'].startswith(self.API.FOLDER_TYPE) else "--" for item in items]
         item_kind_list = [str(guess_extension(item['mimeType']))[1:].upper() if not item['mimeType'].startswith(self.API.FOLDER_TYPE) else "Folder" for item in items]
         
