@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
-from discord import Attachment, File, ApplicationContext, Client, DMChannel, Embed
+from discord import Attachment, File, ApplicationContext, Client, Message, DMChannel, Embed
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 from io import BytesIO, open
@@ -68,16 +68,6 @@ class DriveAPI:
             return _temp_manager
         return _temp_decorator
 
-    # auth_url, _ = flow.authorization_url(prompt='consent')
-
-    # print('Please go to this URL: {}'.format(auth_url))
-
-    # # The user will get an authorization code. This code is used to get the
-    # # access token.
-    # code = input('Enter the authorization code: ')
-    # creds = flow.fetch_token(code=code)
-    # with open("token.json", "w") as token:
-    #   token.write(creds.to_json())
 
     @_input_validator
     def __init__(self, root:str):
@@ -130,7 +120,7 @@ class DriveAPI:
         
         await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
 
-        def check(m):
+        def check(m: Message):
             return isinstance(m.channel, DMChannel) and m.author == ctx.author
 
         msg = await bot.wait_for("message", check=check)
@@ -166,19 +156,6 @@ class DriveAPI:
             # TODO(developer) - Handle errors from drive API.
             print(f"An error occurred: {error}")
 
-
-    # @_input_validator
-    # def folder_id_lookup(self, folder:str) -> str:
-    #     if not folder:
-    #         raise Exception("Folder name cannot be an empty string.")
-    #     try:
-    #         return self.folders[folder]
-    #     except:
-    #         found_folder = self.search(name=folder, files=False)[0]
-    #         if not found_folder:
-    #             raise HttpError("No folders were found")
-    #         self.folders[found_folder["name"]] = found_folder["id"]
-    #         return found_folder["id"]
 
     @_input_validator
     def update_folders(self, flist:list) -> None:
