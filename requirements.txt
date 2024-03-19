@@ -1,5 +1,9 @@
-py-cord==2.4.1
-python-dotenv==1.0.1
-google_api_python_client==2.116.0
+discord.py==1.7.3
+google_api_python_client==2.118.0
+google_auth_oauthlib==0.8.0
 google_auth_oauthlib==1.2.0
-protobuf==3.6.1
+numpy==1.22.3
+opencv_python==4.9.0.80
+opencv_python_headless==4.9.0.80
+protobuf==5.26.0
+python-dotenv==1.0.1
