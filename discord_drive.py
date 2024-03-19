@@ -98,7 +98,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
     # @with_call_order
     @discord.ext.commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
-    async def upload(self, ctx: discord.ApplicationContext, file: discord.Attachment):
+    async def upload(self, ctx: discord.ApplicationContext, file: discord.SlashCommandOptionType.attachment):
 
         if not await self._API_ready(ctx):
             return
@@ -309,7 +309,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
-    async def mkdir(self, ctx: discord.ApplicationContext, folder_name):
+    async def mkdir(self, ctx: discord.ApplicationContext, folder_name: discord.SlashCommandOptionType.string):
 
         if not await self._API_ready(ctx):
             return
@@ -362,7 +362,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     
     @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
-    async def getn(self, ctx: discord.ApplicationContext, n: int):
+    async def getn(self, ctx: discord.ApplicationContext, n: discord.SlashCommandOptionType.integer):
 
         if not await self._API_ready(ctx):
             return
