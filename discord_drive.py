@@ -1,19 +1,21 @@
 import cv2
 import discord
+import math
 import numpy as np
 import os
 import pathlib
 import sys
-import urllib
 
-
+from asyncio import sleep
 from collections import defaultdict, deque
 from datetime import datetime
 from dotenv import load_dotenv
 from discord.ext.commands import has_permissions, MissingPermissions
+from discord.ext.pages import Paginator, Page
+from mimetypes import guess_extension
 from pprint import pprint
 from typing import List
-from asyncio import sleep
+
 
 
 from drive import DriveAPI
@@ -256,16 +258,56 @@ class DriveAPICommands(discord.ext.commands.Cog):
             return
         
         locals_ = locals()
+        # items_per_page = int(items_per_page)
+        
+        def convert_size(size_bytes):
+            if size_bytes == 0:
+                return "0 B"
+            size_name = ("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB")
+            i = int(math.floor(math.log(size_bytes, 1024)))
+            p = math.pow(1024, i)
+            s = round(size_bytes / p, 2)
+            return f"{s} {size_name[i]}"
         
         folder_type_mapping = {
             True: chr(128193),
             False: chr(128196)
         }
         
+        user_color = await self._get_user_color(ctx)
+        
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
-        file_list = [f"{folder_type_mapping[file['mimeType'].startswith(self.API.FOLDER_TYPE)]} {file['name']}" for file in self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)]
-        await ctx.send_response('\n'.join(file_list) if file_list else "This folder is empty!")
+        
+        items = self.API.search(parent=folder_id, files=True, page_size=100, recursive=True)
+        items_per_page = 5
+        
+        item_icon_list = [f"{folder_type_mapping[item['mimeType'].startswith(self.API.FOLDER_TYPE)]} {item['name']}" for item in items]
+        item_size_list = [convert_size(int(item['size'])) if not item['mimeType'].startswith(self.API.FOLDER_TYPE) else "--" for item in items]
+        item_kind_list = [str(guess_extension(item['mimeType']))[1:].upper() if not item['mimeType'].startswith(self.API.FOLDER_TYPE) else "Folder" for item in items]
+        
+        # possibly not necessary
+        item_icon_list.extend([""] * (items_per_page - len(item_icon_list) % items_per_page))
+        item_size_list.extend([""] * (items_per_page - len(item_size_list) % items_per_page))
+        item_kind_list.extend([""] * (items_per_page - len(item_kind_list) % items_per_page))
+        
+        paginated_list = Paginator(
+            pages=[
+                discord.Embed(
+                    title=f"{DriveAPICommands._wd_cache[ctx.author.id][0].name}",
+                    description=f"Path: {DriveAPICommands._wd_cache[ctx.author.id][0]}",
+                    color=user_color,
+                    fields=[
+                            discord.EmbedField(name="Name", value="\n".join(item_icon_list[i:i+items_per_page]), inline=True),
+                            discord.EmbedField(name="Size", value="\n".join(item_size_list[i:i+items_per_page]), inline=True),
+                            discord.EmbedField(name="Kind", value="\n".join(item_kind_list[i:i+items_per_page]), inline=True)
+                        ]# Pycord provides a class with default colors you can choose from
+                )
+                for i in range(0, len(item_icon_list), items_per_page)
+            ]
+        )
 
+        await paginated_list.respond(ctx.interaction, ephemeral=True)
+        
         self._save_to_history(
             id_=ctx.author.id,
             command=Command(
