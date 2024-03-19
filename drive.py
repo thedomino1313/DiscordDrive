@@ -7,7 +7,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
-from discord import Attachment, File, ApplicationContext, Client, DMChannel, Embed
+from discord import Attachment, File, ApplicationContext, Client, Message, DMChannel, Embed
 from zipfile import ZipFile, BadZipFile
 from mimetypes import guess_type
 from io import BytesIO, open
@@ -120,7 +120,7 @@ class DriveAPI:
         
         await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
 
-        def check(m):
+        def check(m: Message):
             return isinstance(m.channel, DMChannel) and m.author == ctx.author
 
         msg = await bot.wait_for("message", check=check)
