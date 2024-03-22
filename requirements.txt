@@ -1,4 +1,4 @@
-discord.py==1.7.3
+py-cord==2.5.0
 google_api_python_client==2.118.0
 google_auth_oauthlib==1.2.0
 numpy==1.22.3
