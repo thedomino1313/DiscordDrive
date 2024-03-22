@@ -1,4 +1,4 @@
-from inspect import getfullargspec, isawaitable
+from inspect import getfullargspec
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -28,21 +28,29 @@ class DriveAPI:
 
     def _input_validator(func):
         def _validate(self, *args, **kwargs):
+            """Loops across all args and kwargs and validates that annotated arguments received the expected type,
+            as well as validating that no arguments are None.
+            """
             argspecs = getfullargspec(func)
             annotations = argspecs.annotations
             argnames = argspecs.args
             for val, arg in zip(args, argnames[1:len(args) + 1]):
                 assert val is not None, f"Argument '{arg}' is None, please do not use None as an argument"
-                assert isinstance(val, annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+                if arg in annotations:
+                    assert isinstance(val, annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             for arg in kwargs:
                 assert kwargs[arg] is not None, f"Argument '{arg}' is None, please do not use None as an argument."
-                assert isinstance(kwargs[arg], annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
+                if arg in annotations:
+                    assert isinstance(kwargs[arg], annotations[arg]), f"Argument '{arg}' is not of the type '{str(annotations[arg])[8:-2]}'."
             return func(self, *args, **kwargs)    
         return _validate
     
     def _temp_dir_async(path):
         def _temp_decorator(func):
             async def _temp_manager(self, *args, **kwargs):
+                """Wraps an asynchronous functon. Creates an empty temporary directory before the function,
+                calls the function, and then clears and removes the temporary directory.
+                """
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
@@ -57,6 +65,9 @@ class DriveAPI:
     def _temp_dir(path):
         def _temp_decorator(func):
             def _temp_manager(self, *args, **kwargs):
+                """Wraps a synchronous functon. Creates an empty temporary directory before the function,
+                calls the function, and then clears and removes the temporary directory.
+                """
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
@@ -71,6 +82,15 @@ class DriveAPI:
 
     @_input_validator
     def __init__(self, root:str):
+        """Initializes the DriveAPI object by starting the service if possible
+
+        Args:
+            root (str): Root folder to connect to
+
+        Raises:
+            Exception: If the root directory is an empty string
+        """
+        # Root directory must be real
         if not root:
             raise Exception("A root directory must be provided.")
         self.ROOT = root
@@ -80,7 +100,7 @@ class DriveAPI:
         # time.
         if os.path.exists("token.json"):
             creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
-        # If there are no (valid) credentials available, let the user log in.
+        # If there are no (valid) credentials available, attempt to do it for them.
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
                 try:
@@ -90,17 +110,25 @@ class DriveAPI:
                     self.create_service(creds)
                 except:
                     pass
-
+        # if creds are good, build the service
         else:
             self.create_service(creds)
 
     @_input_validator
     async def authenticate(self, ctx: ApplicationContext, bot: Client):
+        """Prompts the user to authenticate their google account for API use
+
+        Args:
+            ctx (ApplicationContext): Command application context to send responses to the user
+            bot (Client): Client object to interact with the user and Discord
+        """
+        # Initialize the embed to respond to the user with
         embed = Embed(
             title="Check your DMs!",
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
+        # If the service is already initialized, do not try to reauthenticate
         if self.service:
             embed.title="You are already authenticated!"
             
@@ -109,6 +137,7 @@ class DriveAPI:
             await ctx.respond(embed=embed)
             return
 
+        # Generate a url for the user to visit
         flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", self.SCOPES,
                 redirect_uri='urn:ietf:wg:oauth:2.0:oob'
@@ -116,25 +145,32 @@ class DriveAPI:
         
         auth_url, _ = flow.authorization_url(prompt='consent', )
 
+        # Tell the user to check their dms
         response = await ctx.respond(embed=embed)
         
+        # DM the user to visit the url
         await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
 
+        # Function that validates that a message is from the author and in the DM channel
         def check(m: Message):
             return isinstance(m.channel, DMChannel) and m.author == ctx.author
 
+        # Wait for a response
         msg = await bot.wait_for("message", check=check)
         
+        # Authenticate the token that was provided by the user
         flow.fetch_token(code=msg.content)
         creds = flow.credentials
         
+        # Generate new credentials
         with open("token.json", "w") as token:
             token.write(creds.to_json())
 
+        # Initialize the service
         self.create_service(creds)
 
+        # Respond that authentication is complete
         embed.title = "Authentication Complete!"
-        
         await ctx.author.send(embed=embed)
         await response.edit(embed=embed)
 
