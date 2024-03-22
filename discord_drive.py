@@ -299,6 +299,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             pages=[
                 discord.Embed(
                     title=f"{DriveAPICommands._wd_cache[ctx.author.id][0].name}",
+                    author=discord.EmbedAuthor(name=ctx.author.name, icon_url=ctx.author.display_avatar.url),
                     description=f"Path: {DriveAPICommands._wd_cache[ctx.author.id][0]}",
                     color=user_color,
                     fields=[
@@ -324,8 +325,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
     async def _get_files(ctx: discord.AutocompleteContext):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
 
-    @discord.ext.commands.slash_command(name="export", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
-    async def export(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))): # type: ignore
+    @discord.ext.commands.slash_command(name="download", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
+    async def download(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))): # type: ignore
 
         if not await self._API_ready(ctx):
             return
