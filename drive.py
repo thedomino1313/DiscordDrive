@@ -93,7 +93,8 @@ class DriveAPI:
         # Root directory must be real
         if not root:
             raise Exception("A root directory must be provided.")
-        self.ROOT = root
+        self.ROOT_ID = root.rsplit("/",1)[1]
+        
         creds = None
         # The file token.json stores the user's access and refresh tokens, and is
         # created automatically when the authorization flow completes for the first
@@ -114,76 +115,24 @@ class DriveAPI:
         else:
             self.create_service(creds)
 
-    @_input_validator
-    async def authenticate(self, ctx: ApplicationContext, bot: Client):
-        """Prompts the user to authenticate their google account for API use
-
-        Args:
-            ctx (ApplicationContext): Command application context to send responses to the user
-            bot (Client): Client object to interact with the user and Discord
-        """
-        # Initialize the embed to respond to the user with
-        embed = Embed(
-            title="Check your DMs!",
-        )
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-
-        # If the service is already initialized, do not try to reauthenticate
-        if self.service:
-            embed.title="You are already authenticated!"
-            
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-
-            await ctx.respond(embed=embed)
-            return
-
-        # Generate a url for the user to visit
+    def generate_flow(self):
         flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", self.SCOPES,
                 redirect_uri='urn:ietf:wg:oauth:2.0:oob'
             )
         
         auth_url, _ = flow.authorization_url(prompt='consent', )
-
-        # Tell the user to check their dms
-        response = await ctx.respond(embed=embed)
-        
-        # DM the user to visit the url
-        await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
-
-        # Function that validates that a message is from the author and in the DM channel
-        def check(m: Message):
-            return isinstance(m.channel, DMChannel) and m.author == ctx.author
-
-        # Wait for a response
-        msg = await bot.wait_for("message", check=check)
-        
-        # Authenticate the token that was provided by the user
-        flow.fetch_token(code=msg.content)
-        creds = flow.credentials
-        
-        # Generate new credentials
-        with open("token.json", "w") as token:
-            token.write(creds.to_json())
-
-        # Initialize the service
-        self.create_service(creds)
-
-        # Respond that authentication is complete
-        embed.title = "Authentication Complete!"
-        await ctx.author.send(embed=embed)
-        await response.edit(embed=embed)
+        return flow, auth_url
 
     @_input_validator
     def create_service(self, creds: Credentials):
         try:
             self.service = build("drive", "v3", credentials=creds)
 
-            folder = self.search(file_name=self.ROOT, files=False)
+            folder = self.service.files().get(fileId=self.ROOT_ID).execute()
             
             if not folder:
                 raise Exception("No folders found, check the root name.")
-            folder = folder[0]
             self.ROOT = folder["name"]
             self.ROOT_ID = folder["id"]
             self.folders[folder['name']] = folder['id']
