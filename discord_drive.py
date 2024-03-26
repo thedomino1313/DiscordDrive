@@ -336,14 +336,15 @@ class DriveAPICommands(discord.ext.commands.Cog):
         self, 
         ctx: discord.ApplicationContext, 
         name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files)), # type: ignore
-        timeout="60"
+        timeout="60",
+        public:bool=False
     ): # type: ignore
 
         if not await self._API_ready(ctx):
             return
         
         timeout = float(timeout)
-        await ctx.response.defer(ephemeral=True)
+        await ctx.response.defer(ephemeral=(not public))
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
@@ -361,19 +362,16 @@ class DriveAPICommands(discord.ext.commands.Cog):
             embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
             
             if timeout != float("inf"):
-                # await user.send(embed=embed, ephemeral=True, delete_after=timeout)
-                await ctx.send_followup(embed=embed, ephemeral=True, delete_after=timeout)
+                await ctx.send_followup(embed=embed, delete_after=timeout)
                 await sleep(timeout)
                 self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
             else:
-                # await user.send(embed=embed, ephemeral=True)
-                await ctx.send_followup(embed=embed, ephemeral=True)
+                await ctx.send_followup(embed=embed)
         else:
             if timeout != float("inf"):
-                # await user.send(embed=embed, ephemeral=True)
-                await ctx.send_followup(file=file, ephemeral=True, delete_after=timeout)
+                await ctx.send_followup(file=file, delete_after=timeout)
             else:
-                await ctx.send_followup(file=file, ephemeral=True)
+                await ctx.send_followup(file=file)
                 
     @discord.ext.commands.slash_command(name="share", guild_ids=[os.getenv("DD_GUILD_ID")], description="Share a file from your current working directory")
     async def share(
