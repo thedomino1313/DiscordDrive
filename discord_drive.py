@@ -326,11 +326,17 @@ class DriveAPICommands(discord.ext.commands.Cog):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
 
     @discord.ext.commands.slash_command(name="download", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
-    async def download(self, ctx: discord.ApplicationContext, name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files))): # type: ignore
+    async def download(
+        self, 
+        ctx: discord.ApplicationContext, 
+        name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files)), # type: ignore
+        timeout="60"
+    ): # type: ignore
 
         if not await self._API_ready(ctx):
             return
         
+        timeout = float(timeout)
         await ctx.response.defer(ephemeral=True)
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
@@ -348,11 +354,67 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
             embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
             
-            await ctx.send_followup(embed=embed, ephemeral=True, delete_after=60)
-            await sleep(60)
-            self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
+            if timeout != float("inf"):
+                # await user.send(embed=embed, ephemeral=True, delete_after=timeout)
+                await ctx.send_followup(embed=embed, ephemeral=True, delete_after=timeout)
+                await sleep(timeout)
+                self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
+            else:
+                # await user.send(embed=embed, ephemeral=True)
+                await ctx.send_followup(embed=embed, ephemeral=True)
         else:
-            await ctx.send_followup(file=file, ephemeral=True, delete_after=60)
+            if timeout != float("inf"):
+                # await user.send(embed=embed, ephemeral=True)
+                await ctx.send_followup(file=file, ephemeral=True, delete_after=timeout)
+            else:
+                await ctx.send_followup(file=file, ephemeral=True)
+                
+    @discord.ext.commands.slash_command(name="share", guild_ids=[os.getenv("DD_GUILD_ID")], description="Share a file from your current working directory")
+    async def share(
+        self, 
+        ctx: discord.ApplicationContext, 
+        name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files)), # type: ignore
+        user: discord.SlashCommandOptionType.user,# type: ignore
+        timeout="60"
+    ): # type: ignore
+
+        if not await self._API_ready(ctx):
+            return
+        
+        timeout = float(timeout)
+        await ctx.response.defer(ephemeral=True)
+
+        folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
+        file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
+
+
+        if isinstance(file, str):
+            user_color = await self._get_user_color(ctx)
+            embed = discord.Embed(
+                title=f"Export",
+                color=user_color,
+            )
+            
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+            embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
+            
+            if timeout != float("inf"):
+                # await user.send(embed=embed, ephemeral=True, delete_after=timeout)
+                await user.send_followup(embed=embed, delete_after=timeout)
+                await sleep(timeout)
+                self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
+            else:
+                # await user.send(embed=embed, ephemeral=True)
+                await user.send(embed=embed)
+        else:
+            if timeout != float("inf"):
+                # await user.send(embed=embed, ephemeral=True)
+                await user.send(file=file, delete_after=timeout)
+            else:
+                await user.send(file=file)
+                
+        await ctx.send_followup(f"File shared with {user}!", ephemeral=True)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
