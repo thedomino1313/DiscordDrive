@@ -420,7 +420,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             else:
                 await user.send(file=file)
                 
-        await ctx.send_followup(f"File shared with {user}!", ephemeral=True)
+        await ctx.send_followup(f"File shared with {user.mention}!", ephemeral=True)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
