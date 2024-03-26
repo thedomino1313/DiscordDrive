@@ -407,7 +407,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             
             if timeout != float("inf"):
                 # await user.send(embed=embed, ephemeral=True, delete_after=timeout)
-                await user.send_followup(embed=embed, delete_after=timeout)
+                await user.send(embed=embed, delete_after=timeout)
                 await sleep(timeout)
                 self.API.revoke_sharing(file[file.index("file/d/")+7:-19])
             else:
