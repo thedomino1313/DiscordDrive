@@ -33,11 +33,17 @@ class DriveAPICommands(discord.ext.commands.Cog):
     _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[], files=[]))
     _wd_cache = None
     
-    def __init__(self, bot: discord.ext.commands.Bot, root: str):
+    def __init__(self, bot: discord.ext.commands.Bot, root:str):
+        """Initializes the API connection and cache
+
+        Args:
+            bot (discord.ext.commands.Bot): Discord bot instance
+            root (str): Link to the root folder
+        """
         self.bot = bot
-        self.root = root
+        self.API = DriveAPI(root)
+        self.root = self.API.ROOT
         self.root_path = pathlib.Path(self.root)
-        self.API = DriveAPI(self.root)
         
         if self.API.service is not None:
             items = self.API.search(parent=self.API.ROOT_ID, page_size=100, recursive=True)
@@ -400,7 +406,52 @@ class DriveAPICommands(discord.ext.commands.Cog):
     @has_permissions(administrator=True)
     async def authenticate(self, ctx: discord.ApplicationContext):
         await ctx.defer()
-        await self.API.authenticate(ctx, self.bot)
+
+        embed = discord.Embed(
+            title="Check your DMs!",
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+        # If the service is already initialized, do not try to reauthenticate
+        if self.API.service:
+            embed.title="You are already authenticated!"
+            
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+
+            await ctx.respond(embed=embed)
+            return
+
+        # Generate a url for the user to visit
+        flow, auth_url = self.API.generate_flow()
+
+        # Tell the user to check their dms
+        response = await ctx.respond(embed=embed)
+        
+        # DM the user to visit the url
+        await ctx.author.send(f'Please go to [this URL]({auth_url}) and respond with the authorization code.')
+
+        # Function that validates that a message is from the author and in the DM channel
+        def check(m: discord.Message):
+            return isinstance(m.channel, discord.DMChannel) and m.author == ctx.author
+
+        # Wait for a response
+        msg = await self.bot.wait_for("message", check=check)
+        
+        # Authenticate the token that was provided by the user
+        flow.fetch_token(code=msg.content)
+        creds = flow.credentials
+        
+        # Generate new credentials
+        with open("token.json", "w") as token:
+            token.write(creds.to_json())
+
+        # Initialize the service
+        self.API.create_service(creds)
+
+        # Respond that authentication is complete
+        embed.title = "Authentication Complete!"
+        await ctx.author.send(embed=embed)
+        await response.edit(embed=embed)
         
         if self.API.service is not None:
             items = self.API.search(parent=self.API.ROOT_ID, page_size=100, recursive=True)
