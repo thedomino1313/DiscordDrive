@@ -353,7 +353,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
         user_color = await self._get_user_color(ctx)
         embed = discord.Embed(
-            title=f"Download {name}",
+            title=f"{name} download",
             description=f"{DriveAPICommands._wd_cache[ctx.author.id][0]}",
             color=user_color,
         )
@@ -394,17 +394,28 @@ class DriveAPICommands(discord.ext.commands.Cog):
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
 
+        user_color = await self._get_user_color(ctx)
+        embed = discord.Embed(
+            title=f"{name} has been shared with you!",
+            description=f"From: {DriveAPICommands._wd_cache[ctx.author.id][0]}",
+            color=user_color,
+        )
+        
+        embed2 = discord.Embed(
+            title=f"Sharing {name}",
+            description=f"{DriveAPICommands._wd_cache[ctx.author.id][0]}",
+            color=user_color,
+        )
+        
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        embed2.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        embed2.add_field(name="", value=f"File shared with {user.mention}!", inline=True)
+
+        await ctx.send_followup(embed=embed2, ephemeral=True)
 
         if isinstance(file, str):
-            user_color = await self._get_user_color(ctx)
-            embed = discord.Embed(
-                title=f"Export",
-                color=user_color,
-            )
-            
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
-            embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
+            embed.add_field(name="Click below for your file!", value=f"{file}\nLink expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
             
             if timeout != float("inf"):
                 # await user.send(embed=embed, ephemeral=True, delete_after=timeout)
@@ -415,13 +426,13 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 # await user.send(embed=embed, ephemeral=True)
                 await user.send(embed=embed)
         else:
+            
+            embed.add_field(name="Download the attached file!", value=f"File expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
             if timeout != float("inf"):
                 # await user.send(embed=embed, ephemeral=True)
-                await user.send(file=file, delete_after=timeout)
+                await user.send(embed=embed, file=file, delete_after=timeout)
             else:
-                await user.send(file=file)
-                
-        await ctx.send_followup(f"File shared with {user.mention}!", ephemeral=True)
+                await user.send(embed=embed, file=file)
         
     
     @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
