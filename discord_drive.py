@@ -7,6 +7,7 @@ import pathlib
 import sys
 
 from asyncio import sleep
+from time import time
 from collections import defaultdict, deque
 from datetime import datetime
 from dotenv import load_dotenv
@@ -350,17 +351,18 @@ class DriveAPICommands(discord.ext.commands.Cog):
         file = self.API.export(file_name=name, parent=folder_id, limit=ctx.guild.filesize_limit)
 
 
-        if isinstance(file, str):
-            user_color = await self._get_user_color(ctx)
-            embed = discord.Embed(
-                title=f"Export",
-                color=user_color,
-            )
-            
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        user_color = await self._get_user_color(ctx)
+        embed = discord.Embed(
+            title=f"Download {name}",
+            description=f"{DriveAPICommands._wd_cache[ctx.author.id][0]}",
+            color=user_color,
+        )
+        
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
 
-            embed.add_field(name="Click below for your file!", value=f"{file}", inline=True)
-            
+
+        if isinstance(file, str):
+            embed.add_field(name="Click below for your file!", value=f"{file}\nLink expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
             if timeout != float("inf"):
                 await ctx.send_followup(embed=embed, delete_after=timeout)
                 await sleep(timeout)
@@ -368,10 +370,11 @@ class DriveAPICommands(discord.ext.commands.Cog):
             else:
                 await ctx.send_followup(embed=embed)
         else:
+            embed.add_field(name="Download the attached file!", value=f"File expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
             if timeout != float("inf"):
-                await ctx.send_followup(file=file, delete_after=timeout)
+                await ctx.send_followup(embed=embed, file=file, delete_after=timeout)
             else:
-                await ctx.send_followup(file=file)
+                await ctx.send_followup(embed=embed, file=file)
                 
     @discord.ext.commands.slash_command(name="share", guild_ids=[os.getenv("DD_GUILD_ID")], description="Share a file from your current working directory")
     async def share(
@@ -381,7 +384,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         user: discord.SlashCommandOptionType.user,# type: ignore
         timeout="60"
     ): # type: ignore
-
+        
         if not await self._API_ready(ctx):
             return
         
