@@ -222,6 +222,8 @@ class DriveAPI:
             flist = [self.upload(file_name, mimetype, local_path="temp", parent=parent) for file_name in os.listdir("temp") if (mimetype := guess_type(os.path.join("temp", file_name))[0]) is not None]
             if len(flist) != len(os.listdir("temp")):
                 s = "Please ensure that there are no folders inside of the zip file, as they and their contents will not be uploaded.\n"
+                if len(flist) == 0:
+                    return s.strip()
             else: s = ""
             return f"{s}File{'s' if len(flist) != 1 else ''} `{', '.join(flist)}` uploaded!"
         except BadZipFile:
