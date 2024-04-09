@@ -19,7 +19,7 @@ from typing import List
 
 
 
-from discord_drive.drive import DriveAPI
+from .drive import DriveAPI
 
 load_dotenv()
 
