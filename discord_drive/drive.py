@@ -214,7 +214,6 @@ class DriveAPI:
         file_name = f"temp/{file.filename}"
         await file.save(file_name)
         try:
-            print(guess_type(file_name))
             if 'zip' not in guess_type(file_name)[0]: raise BadZipFile
             with ZipFile(file_name, 'r') as zf:
                 zf.extractall("temp")
