@@ -381,9 +381,9 @@ class DriveAPICommands(discord.ext.commands.Cog):
         self, 
         ctx: discord.ApplicationContext, 
         name: discord.Option(str, "Pick a file", autocomplete=discord.utils.basic_autocomplete(_get_files)), # type: ignore
-        user: discord.SlashCommandOptionType.user,# type: ignore
+        user: discord.SlashCommandOptionType.user,
         timeout="60"
-    ): # type: ignore
+    ):
         
         if not await self._API_ready(ctx):
             return
