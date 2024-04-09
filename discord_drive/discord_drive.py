@@ -562,3 +562,17 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
         # print(locals_)
         await ctx.send_response("Commands printed")
+    
+    @discord.ext.commands.slash_command(name="discord_drive_commands", guild_ids=[os.getenv("DD_GUILD_ID")], description="Show all useable commands")
+    async def help(self, ctx: discord.ApplicationContext):
+        user_color = await self._get_user_color(ctx)
+        embed = discord.Embed(
+            title=f"Make Directory",
+            color=user_color,
+        )
+        
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        for text in "`/authenticate`: Regenerates the token needed to enable the API. If re-authentication is needed, the bot will DM the caller a link and wait for the authentication code given to the caller by Google\n`/cd <directory>`: Navigates the caller down into a child directory of their current directory. Autocomplete is provided for hints.\n`/download <file> <timeout (optional)> <public (optional)>`: Gives the user the file (or a link) to download the file specified. Files have autocomplete. Timeout defaults to 60 seconds, where the file will then no longer be allowed to be downloaded. Public defaults to False, where no other users can see the file.\n`/ls`: Shows the caller the contents of their current directory.\n`/pwd`: Shows the caller the file path of their current directory.\n`/share <file> <user> <timeout (optional)>`: Sends a specified server member a dm with a file from the caller's current directory. Files and users have autocomplete. Timeout defaults to 60 seconds, where the file will then no longer be allowed to be downloaded.\n`/upload <attachment>`: Uploads a file or zip file to the caller's current directory. Zip files must contain just the files, and no folders, as they will not be read.".split("\n"):
+            embed.add_field(name="", value=text, inline=False)
+        await ctx.send_response(embed=embed)
+        
