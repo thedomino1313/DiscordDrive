@@ -13,7 +13,7 @@ from mimetypes import guess_type
 from io import BytesIO, open
 from datetime import datetime, timedelta
 
-from utils import *
+from discord_drive.utils import *
 
 class DriveAPI:
     ROOT = ""
