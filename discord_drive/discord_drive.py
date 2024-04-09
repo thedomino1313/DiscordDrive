@@ -17,8 +17,6 @@ from mimetypes import guess_extension
 from pprint import pprint
 from typing import List
 
-
-
 from .drive import DriveAPI
 
 load_dotenv()

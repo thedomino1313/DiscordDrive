@@ -1,7 +1,9 @@
+# import os
 from setuptools import setup
 
-with open('requirements.txt') as f:
-    required = f.read().splitlines()
+# print(os.curdir)
+# with open('./discord_drive/requirements.txt') as f:
+#     required = f.read().splitlines()
     
 setup(
     name='discord_drive',
@@ -13,5 +15,14 @@ setup(
     author_email='',
     keywords=['Discord', 'Google Drive'],
     url='https://github.com/thedomino1313/DiscordDrive',
-    install_requires=required
+    install_requires=[
+        'py-cord',
+        'google_api_python_client',
+        'google_auth_oauthlib',
+        'numpy',
+        'opencv_python',
+        'opencv_python_headless',
+        'protobuf',
+        'python-dotenv'
+    ]
 )
