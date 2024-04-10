@@ -16,19 +16,22 @@ Support some “root” directory
 ## Usage:
 1. Clone the repository (this will change soon to installing through pip)
 2. Get the id of your server, create a file named `.env` in the directory that your bot runs out of, and put the following code in it:
-```
-set
-DD_GUILD_ID=<server id>
-```
+   ```
+   set
+   DD_GUILD_ID=<server id>
+   ```
 3. Follow the official [Google quick-start instructions](https://developers.google.com/drive/api/quickstart/python) to generate your credentials file.
 4. Save the credentials file as `credentials.json` in the same directory as the .env file.
 5. Open Google Drive, go to the directory that you want to root the bot to, and get the link.
-   1. It should be of format: `https://drive.google.com/drive/folders/folder_id`
+   - It should be of format: `https://drive.google.com/drive/folders/folder_id`
 6. Create a Discord bot using Pycord, and add the DiscordDrive command suite to it with the following code:
-```python
-from discord_drive import DriveAPICommands
-bot.add_cog(DriveAPICommands(bot, "<link from step 5>"))
-```
+   ```python
+   from dotenv import load_dotenv
+   load_dotenv()
+   from discord_drive import DriveAPICommands
+   bot.add_cog(DriveAPICommands(bot, "<link from step 5>"))
+   ```
+   - It is very important that `load_dotenv()` is called before importing the module.
 7. Run the bot, and use `/authenticate` to ensure that DiscordDrive is authorized to access your Google Account.
 
 ## Commands:
