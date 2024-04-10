@@ -10,7 +10,6 @@ from asyncio import sleep
 from time import time
 from collections import defaultdict, deque
 from datetime import datetime
-from dotenv import load_dotenv
 from discord.ext.commands import has_permissions, MissingPermissions
 from discord.ext.pages import Paginator, Page
 from mimetypes import guess_extension
@@ -19,19 +18,24 @@ from typing import List
 
 from .drive import DriveAPI
 
-load_dotenv()
-
 class Command:
     def __init__(self, str_, params: dict):
         self._str = str_
         self._params = params
         self._timestamp = datetime.now()
 
-class DriveAPICommands(discord.ext.commands.Cog):
+def get_guild_ids():
+    guild_id = os.getenv("DD_GUILD_ID")
+    if not guild_id:
+        raise Exception("Environment variable 'DD_GUILD_ID' not found, please ensure that the .env file contains this variable, and that 'load_dotenv()' is placed above the import of this cog.")
+    return [guild_id]
+
+class DriveAPICommands(discord.ext.commands.Cog, guild_ids=get_guild_ids()):
     
     _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[], files=[]))
     _wd_cache = None
     
+
     def __init__(self, bot: discord.ext.commands.Bot, root:str):
         """Initializes the API connection and cache
 
@@ -104,7 +108,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             raise error
 
     # @with_call_order
-    @discord.ext.commands.slash_command(name="upload", guild_ids=[os.getenv("DD_GUILD_ID")], description="Upload a file to your Google Drive")
+    @discord.ext.commands.slash_command(name="upload", description="Upload a file to your Google Drive")
     async def upload(self, ctx: discord.ApplicationContext, file: discord.SlashCommandOptionType.attachment):
 
         if not await self._API_ready(ctx):
@@ -145,7 +149,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             )
         )
     
-    @discord.ext.commands.slash_command(name="pwd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Print your current working directory")
+    @discord.ext.commands.slash_command(name="pwd", description="Print your current working directory")
     async def pwd(self, ctx: discord.ApplicationContext):
 
         if not await self._API_ready(ctx):
@@ -180,7 +184,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     async def _get_folders(ctx: discord.AutocompleteContext):
         return ["~", "..", *DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["folders"]]
 
-    @discord.ext.commands.slash_command(name="cd", guild_ids=[os.getenv("DD_GUILD_ID")], description="Change your current working directory")
+    @discord.ext.commands.slash_command(name="cd", description="Change your current working directory")
     async def cd(self, ctx: discord.ApplicationContext, path: discord.Option(str, "Pick a folder", autocomplete=discord.utils.basic_autocomplete(_get_folders))): # type: ignore
         
         if not await self._API_ready(ctx):
@@ -256,7 +260,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         embed.add_field(name="", value=f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`", inline=True)
         await ctx.send_response(embed=embed)
         
-    @discord.ext.commands.slash_command(name="ls", guild_ids=[os.getenv("DD_GUILD_ID")], description="List all files in your current working directory")
+    @discord.ext.commands.slash_command(name="ls", description="List all files in your current working directory")
     async def ls(self, ctx: discord.ApplicationContext):
 
         if not await self._API_ready(ctx):
@@ -330,7 +334,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
     async def _get_files(ctx: discord.AutocompleteContext):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
 
-    @discord.ext.commands.slash_command(name="download", guild_ids=[os.getenv("DD_GUILD_ID")], description="Download a file from your current working directory")
+    @discord.ext.commands.slash_command(name="download", description="Download a file from your current working directory")
     async def download(
         self, 
         ctx: discord.ApplicationContext, 
@@ -374,7 +378,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             else:
                 await ctx.send_followup(embed=embed, file=file)
                 
-    @discord.ext.commands.slash_command(name="share", guild_ids=[os.getenv("DD_GUILD_ID")], description="Share a file from your current working directory")
+    @discord.ext.commands.slash_command(name="share", description="Share a file from your current working directory")
     async def share(
         self, 
         ctx: discord.ApplicationContext, 
@@ -433,7 +437,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 await user.send(embed=embed, file=file)
         
     
-    @discord.ext.commands.slash_command(name="mkdir", guild_ids=[os.getenv("DD_GUILD_ID")], description="Make a new folder in your current working directory")
+    @discord.ext.commands.slash_command(name="mkdir", description="Make a new folder in your current working directory")
     @has_permissions(administrator=True)
     async def mkdir(self, ctx: discord.ApplicationContext, folder_name: discord.SlashCommandOptionType.string):
 
@@ -474,7 +478,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         )
     
     
-    @discord.ext.commands.slash_command(name="authenticate", guild_ids=[os.getenv("DD_GUILD_ID")], description="Authenticate your google account")
+    @discord.ext.commands.slash_command(name="authenticate", description="Authenticate your google account")
     @has_permissions(administrator=True)
     async def authenticate(self, ctx: discord.ApplicationContext):
         await ctx.defer()
@@ -531,7 +535,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
             DriveAPICommands._drive_state[self.root_path]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
     
-    @discord.ext.commands.slash_command(name="getn", guild_ids=[os.getenv("DD_GUILD_ID")], description="DEBUG: Get last n commands")
+    @discord.ext.commands.slash_command(name="getn", description="DEBUG: Get last n commands")
     @has_permissions(administrator=True)
     async def getn(self, ctx: discord.ApplicationContext, n: discord.SlashCommandOptionType.integer):
 
@@ -561,7 +565,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         # print(locals_)
         await ctx.send_response("Commands printed")
     
-    @discord.ext.commands.slash_command(name="discord_drive_commands", guild_ids=[os.getenv("DD_GUILD_ID")], description="Show all useable commands")
+    @discord.ext.commands.slash_command(name="discord_drive_commands", description="Show all useable commands")
     async def help(self, ctx: discord.ApplicationContext):
         user_color = await self._get_user_color(ctx)
         embed = discord.Embed(
