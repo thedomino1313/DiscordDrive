@@ -569,7 +569,7 @@ class DriveAPICommands(discord.ext.commands.Cog, guild_ids=get_guild_ids()):
     async def help(self, ctx: discord.ApplicationContext):
         user_color = await self._get_user_color(ctx)
         embed = discord.Embed(
-            title=f"Make Directory",
+            title=f"Commands List",
             color=user_color,
         )
         
