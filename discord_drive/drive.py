@@ -116,6 +116,8 @@ class DriveAPI:
             self.create_service(creds)
 
     def generate_flow(self):
+        if not os.path.exists("credentials.json"):
+            return None, None
         flow = InstalledAppFlow.from_client_secrets_file(
                 "credentials.json", self.SCOPES,
                 redirect_uri='urn:ietf:wg:oauth:2.0:oob'
