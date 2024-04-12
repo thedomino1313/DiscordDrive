@@ -20,7 +20,7 @@ Support some “root” directory
    set
    DD_GUILD_ID=<server id>
    ```
-3. Follow the official [Google quick-start instructions](https://developers.google.com/drive/api/quickstart/python) to generate your credentials file.
+3. Follow the official [Google Drive Developer quick-start instructions](https://developers.google.com/drive/api/quickstart/python) to generate your credentials file.
 4. Save the credentials file as `credentials.json` in the same directory as the .env file.
 5. Open Google Drive, go to the directory that you want to root the bot to, and get the link.
    - It should be of format: `https://drive.google.com/drive/folders/folder_id`
