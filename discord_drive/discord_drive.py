@@ -500,7 +500,7 @@ class DriveAPICommands(discord.ext.commands.Cog, guild_ids=get_guild_ids()):
         # Generate a url for the user to visit
         flow, auth_url = self.API.generate_flow()
         if (flow, auth_url) == (None, None):
-            embed.title = "credentials.json was not found, please ensure that you have generated the file with Google Cloud and that it is in the working directory."
+            embed.title = "credentials.json was not found or could not be processed, please ensure that you have generated the file correctly with Google Cloud and that it is in the working directory."
             embed.add_field(name="", value="[Google Drive Developer quick-start instructions](https://developers.google.com/drive/api/quickstart/python)")
             response = await ctx.respond(embed=embed)
             return

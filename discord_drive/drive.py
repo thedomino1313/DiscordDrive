@@ -100,7 +100,10 @@ class DriveAPI:
         # created automatically when the authorization flow completes for the first
         # time.
         if os.path.exists("token.json"):
-            creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
+            try:
+                creds = Credentials.from_authorized_user_file("token.json", self.SCOPES)
+            except:
+                creds = None
         # If there are no (valid) credentials available, attempt to do it for them.
         if not creds or not creds.valid:
             if creds and creds.expired and creds.refresh_token:
@@ -118,13 +121,16 @@ class DriveAPI:
     def generate_flow(self):
         if not os.path.exists("credentials.json"):
             return None, None
-        flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", self.SCOPES,
-                redirect_uri='urn:ietf:wg:oauth:2.0:oob'
-            )
-        
-        auth_url, _ = flow.authorization_url(prompt='consent', )
-        return flow, auth_url
+        try:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                    "credentials.json", self.SCOPES,
+                    redirect_uri='urn:ietf:wg:oauth:2.0:oob'
+                )
+            
+            auth_url, _ = flow.authorization_url(prompt='consent', )
+            return flow, auth_url
+        except:
+            return None, None
 
     @_input_validator
     def create_service(self, creds: Credentials):
