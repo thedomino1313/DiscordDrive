@@ -14,25 +14,20 @@ Want to be able to retrieve files/folders from Google Drive
 Support some “root” directory
 
 ## Usage:
-1. Clone the repository (this will change soon to installing through pip)
-2. Get the id of your server, create a file named `.env` in the directory that your bot runs out of, and put the following code in it:
+1. Install the library:
    ```
-   set
-   DD_GUILD_ID=<server id>
+   pip install discord-drive
    ```
-3. Follow the official [Google Drive Developer quick-start instructions](https://developers.google.com/drive/api/quickstart/python) to generate your credentials file.
-4. Save the credentials file as `credentials.json` in the same directory as the .env file.
-5. Open Google Drive, go to the directory that you want to root the bot to, and get the link.
+2. Follow the official [Google Drive Developer quick-start instructions](https://developers.google.com/drive/api/quickstart/python) to generate your credentials file.
+3. Save the credentials file as `credentials.json` in the running directory of your Discord bot.
+4. Open Google Drive, go to the directory that you want to root the bot to, and get the link.
    - It should be of format: `https://drive.google.com/drive/folders/folder_id`
-6. Create a Discord bot using Pycord, and add the DiscordDrive command suite to it with the following code:
+5. Create a Discord bot using Pycord, and add the DiscordDrive command suite to it with the following code:
    ```python
-   from dotenv import load_dotenv
-   load_dotenv()
    from discord_drive import DriveAPICommands
    bot.add_cog(DriveAPICommands(bot, "<link from step 5>"))
    ```
-   - It is very important that `load_dotenv()` is called before importing the module.
-7. Run the bot, and use `/authenticate` to ensure that DiscordDrive is authorized to access your Google Account.
+6. Run the bot, and use `/authenticate` to ensure that DiscordDrive is authorized to access your Google Account.
 
 ## Commands:
 `/authenticate`: Regenerates the token needed to enable the API. If re-authentication is needed, the bot will DM the caller a link and wait for the authentication code given to the caller by Google\
