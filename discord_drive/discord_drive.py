@@ -24,13 +24,7 @@ class Command:
         self._params = params
         self._timestamp = datetime.now()
 
-def get_guild_ids():
-    guild_id = os.getenv("DD_GUILD_ID")
-    if not guild_id:
-        raise Exception("Environment variable 'DD_GUILD_ID' not found, please ensure that the .env file contains this variable, and that 'load_dotenv()' is placed above the import of this cog.")
-    return [guild_id]
-
-class DriveAPICommands(discord.ext.commands.Cog, guild_ids=get_guild_ids()):
+class DriveAPICommands(discord.ext.commands.Cog):
     
     _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[], files=[]))
     _wd_cache = None
