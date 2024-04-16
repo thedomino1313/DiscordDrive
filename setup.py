@@ -30,7 +30,7 @@ description = """
 
 setup(
     name='discord_drive',
-    version='0.0.8',
+    version='0.0.9',
     description='Use Google Drive via Discord!',
     license='MIT',
     packages=['discord_drive'],
