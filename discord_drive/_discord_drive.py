@@ -17,6 +17,7 @@ from pprint import pprint
 from typing import List
 
 from ._drive import DriveAPI
+from ._utils import empty_dir
 
 class DriveAPICommands(discord.ext.commands.Cog):
     
@@ -305,11 +306,16 @@ class DriveAPICommands(discord.ext.commands.Cog):
             else:
                 await ctx.send_followup(embed=embed)
         else:
-            embed.add_field(name="Download the attached file!", value=f"File expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
-            if timeout != float("inf"):
-                await ctx.send_followup(embed=embed, file=file, delete_after=timeout)
-            else:
-                await ctx.send_followup(embed=embed, file=file)
+            @DriveAPI._temp_dir_async("temp")
+            async def send_file():
+                embed.add_field(name="Download the attached file!", value=f"File expires {('<t:' + str(int(time() + timeout)) + ':R>') if timeout != float('inf') else 'never'}.", inline=True)
+                if timeout != float("inf"):
+                    await ctx.send_followup(embed=embed, file=file, delete_after=timeout)
+                else:
+                    await ctx.send_followup(embed=embed, file=file)
+                file.close()
+
+            await send_file()
                 
     @discord.ext.commands.slash_command(name="share", description="Share a file from your current working directory")
     async def share(
@@ -368,6 +374,8 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 await user.send(embed=embed, file=file, delete_after=timeout)
             else:
                 await user.send(embed=embed, file=file)
+            file.close()
+            empty_dir("temp")
         
     
     @discord.ext.commands.slash_command(name="mkdir", description="Make a new folder in your current working directory")

@@ -47,34 +47,46 @@ class DriveAPI:
     
     def _temp_dir_async(path):
         def _temp_decorator(func):
-            async def _temp_manager(self, *args, **kwargs):
+            async def _temp_manager(*args, **kwargs):
                 """Wraps an asynchronous functon. Creates an empty temporary directory before the function,
                 calls the function, and then clears and removes the temporary directory.
                 """
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
+                    try:
+                        empty_dir(path)
+                    except Exception as e:
+                        pass
+                ret = await func(*args, **kwargs)
+                try:
                     empty_dir(path)
-                ret = await func(self, *args, **kwargs)
-                empty_dir(path)
-                os.rmdir(path)
+                    os.rmdir(path)
+                except Exception as e:
+                    pass
                 return ret
             return _temp_manager
         return _temp_decorator
     
     def _temp_dir(path):
         def _temp_decorator(func):
-            def _temp_manager(self, *args, **kwargs):
+            def _temp_manager(*args, **kwargs):
                 """Wraps a synchronous functon. Creates an empty temporary directory before the function,
                 calls the function, and then clears and removes the temporary directory.
                 """
                 if not os.path.exists(path):
                     os.mkdir(path)
                 else:
+                    try:
+                        empty_dir(path)
+                    except Exception as e:
+                        pass
+                ret = func(*args, **kwargs)
+                try:
                     empty_dir(path)
-                ret = func(self, *args, **kwargs)
-                empty_dir(path)
-                os.rmdir(path)
+                    os.rmdir(path)
+                except Exception as e:
+                    pass
                 return ret
             return _temp_manager
         return _temp_decorator
