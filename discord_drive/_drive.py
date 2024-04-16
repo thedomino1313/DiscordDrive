@@ -93,7 +93,7 @@ class DriveAPI:
         # Root directory must be real
         if not root:
             raise Exception("A root directory must be provided.")
-        self.ROOT_ID = root.rsplit("/",1)[1]
+        self.ROOT_ID = root.rsplit("/",1)[1].split("?resourcekey=")[0]
         
         creds = None
         # The file token.json stores the user's access and refresh tokens, and is
@@ -202,7 +202,7 @@ class DriveAPI:
                 self.service.files()
                 .list(pageSize=page_size, 
                     pageToken=page_token, 
-                    q=f"trashed = false{mimeScript}{nameScript}{parentScript}", 
+                    q=f"trashed = false{mimeScript}{nameScript}{parentScript} and mimeType!='application/vnd.google-apps.shortcut'",
                     orderBy="folder, name", 
                     fields="nextPageToken, files(id, name, mimeType, size)")
                 .execute()
