@@ -7,7 +7,7 @@ from setuptools import setup
     
 setup(
     name='discord_drive',
-    version='0.0.1',
+    version='0.0.5',
     description='Use Google Drive via Discord!',
     license='MIT',
     packages=['discord_drive'],
