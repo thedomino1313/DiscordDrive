@@ -1,1 +1,1 @@
-from .discord_drive import DriveAPICommands
+from ._discord_drive import DriveAPICommands

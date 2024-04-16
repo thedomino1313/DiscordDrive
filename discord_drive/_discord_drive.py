@@ -16,13 +16,7 @@ from mimetypes import guess_extension
 from pprint import pprint
 from typing import List
 
-from .drive import DriveAPI
-
-class Command:
-    def __init__(self, str_, params: dict):
-        self._str = str_
-        self._params = params
-        self._timestamp = datetime.now()
+from ._drive import DriveAPI
 
 class DriveAPICommands(discord.ext.commands.Cog):
     
@@ -51,35 +45,12 @@ class DriveAPICommands(discord.ext.commands.Cog):
         # self.root_alias = '~'
         self.capacity = 15
         
-        self._command_history = defaultdict(lambda: deque())
         DriveAPICommands._wd_cache = defaultdict(lambda: [pathlib.Path(self.root), pathlib.Path(self.root)])
         
     async def _API_ready(self, ctx: discord.ApplicationContext):
         if not (result := bool(self.API.service)):
             await ctx.send_response("Please use `/authenticate` to validate your Google Account's credentials before using any commands!")
         return result
-
-    def _save_to_history(self, id_, command: Command):
-        if len(self._command_history[id_]) == self.capacity:
-            self._command_history[id_].popleft()
-            
-        self._command_history[id_].append(command)
-        # print(self._history[id_].pop()._str)
-        # print(command._str, command._params)
-    
-    def _get_last_command(self, id_) -> Command:
-        return self._command_history[id_].pop()
-    
-    def _get_last_commands(self, id_, n: int) -> List[Command]:
-        
-        if n > len(self._command_history[id_]):
-            raise IndexError
-        
-        commands = []
-        for _ in range(n):
-            commands.append(self._get_last_command(id_))
-        
-        return commands
     
     async def _get_user_color(self, ctx: discord.ApplicationContext) -> discord.Colour:
         avatar_byte_array = await ctx.author.display_avatar.with_format("png").read()
@@ -109,8 +80,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
             return
         
         await ctx.defer()
-        
-        locals_ = locals()
 
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         result = await self.API.upload_from_discord(file=file, parent=folder_id)
@@ -133,15 +102,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
             await ctx.send_followup(embed=embed)
         else:
             return
-        
-        
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
     
     @discord.ext.commands.slash_command(name="pwd", description="Print your current working directory")
     async def pwd(self, ctx: discord.ApplicationContext):
@@ -183,8 +143,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
         
         if not await self._API_ready(ctx):
             return
-    
-        locals_ = locals()
         
         folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         
@@ -237,14 +195,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
             path, folder_id = folder[0]["name"], folder[0]["id"]
             DriveAPICommands._wd_cache[ctx.author.id][0] /= path
-
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
         
         items = self.API.search(parent=folder_id, page_size=100, recursive=True)
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"] = folder_id
@@ -259,9 +209,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
         if not await self._API_ready(ctx):
             return
-        
-        locals_ = locals()
-        # items_per_page = int(items_per_page)
         
         def convert_size(size_bytes):
             if size_bytes == 0:
@@ -316,14 +263,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
         )
 
         await paginated_list.respond(ctx.interaction, ephemeral=True)
-        
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
     
     async def _get_files(ctx: discord.AutocompleteContext):
         return DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.interaction.user.id][0]]["files"]
@@ -437,8 +376,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
 
         if not await self._API_ready(ctx):
             return
-        
-        locals_ = locals()
 
         parent_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
         success = self.API.make_folder(file_name=folder_name, parent=parent_id)
@@ -462,15 +399,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
         else:
             embed.add_field(name="", value="Could not create folder.", inline=True)
             await ctx.send_response(embed=embed)
-            
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
-    
     
     @discord.ext.commands.slash_command(name="authenticate", description="Authenticate your google account")
     @has_permissions(administrator=True)
@@ -534,36 +462,6 @@ class DriveAPICommands(discord.ext.commands.Cog):
             DriveAPICommands._drive_state[self.root_path]["id"] = self.API.ROOT_ID
             DriveAPICommands._drive_state[self.root_path]["folders"] = [folder["name"] for folder in items if folder['mimeType'].startswith(self.API.FOLDER_TYPE)]
             DriveAPICommands._drive_state[self.root_path]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
-    
-    @discord.ext.commands.slash_command(name="getn", description="DEBUG: Get last n commands")
-    @has_permissions(administrator=True)
-    async def getn(self, ctx: discord.ApplicationContext, n: discord.SlashCommandOptionType.integer):
-
-        if not await self._API_ready(ctx):
-            return
-        
-        locals_ = locals()
-        
-        try:
-            commands = self._get_last_commands(ctx.author.id, int(n))
-        except IndexError:
-            await ctx.send_response("Error retrieving commands")
-            return
-            
-        
-        for command in commands:
-            pprint(f"{command._timestamp} - Command: {command._str}\nParams: {command._params}")
-        
-        self._save_to_history(
-            id_=ctx.author.id,
-            command=Command(
-                str_=sys._getframe(0).f_code.co_name,
-                params=locals_
-            )
-        )
-        
-        # print(locals_)
-        await ctx.send_response("Commands printed")
     
     @discord.ext.commands.slash_command(name="discord_drive_commands", description="Show all useable commands")
     async def help(self, ctx: discord.ApplicationContext):
