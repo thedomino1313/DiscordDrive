@@ -175,7 +175,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
                 folder_id = DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["id"]
             else:
                 embed.add_field(name="", value="You are in the root directory.", inline=True)
-                await ctx.send_response(embed=embed)
+                await ctx.send_response(embed=embed, ephemeral=True)
                 return
                 
         elif path == '-':
@@ -191,7 +191,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
             
             if not folder:
                 embed.add_field(name="", value=f"{path} is not reachable from your current directory.", inline=True)
-                await ctx.send_response(embed=embed)
+                await ctx.send_response(embed=embed, ephemeral=True)
                 return
 
             path, folder_id = folder[0]["name"], folder[0]["id"]
@@ -203,7 +203,7 @@ class DriveAPICommands(discord.ext.commands.Cog):
         DriveAPICommands._drive_state[DriveAPICommands._wd_cache[ctx.author.id][0]]["files"] = [file["name"] for file in items if not file['mimeType'].startswith(self.API.FOLDER_TYPE)]
         
         embed.add_field(name="", value=f"Directory changed to `{DriveAPICommands._wd_cache[ctx.author.id][0]}`", inline=True)
-        await ctx.send_response(embed=embed)
+        await ctx.send_response(embed=embed, ephemeral=True)
         
     @discord.ext.commands.slash_command(name="ls", description="List all files in your current working directory")
     async def ls(self, ctx: discord.ApplicationContext):
