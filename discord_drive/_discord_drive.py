@@ -19,7 +19,7 @@ from typing import List
 from ._drive import DriveAPI
 from ._utils import empty_dir
 
-class DriveAPICommands(discord.ext.commands.Cog):
+class DriveAPICommands(discord.ext.commands.Cog, command_attrs = dict(guild_only=True)):
     
     _drive_state = defaultdict(lambda: defaultdict(id=None, folders=[], files=[]))
     _wd_cache = None
